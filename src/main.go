@@ -19,7 +19,7 @@ func main() {
 //        fmt.Println("VirtualSize: ", img.VirtualSize)
 //        fmt.Println("ParentId: ", img.ParentID)
 //    }
-//
+
     var callback = func() []string {
         ret_ips := make([]string, 0)
         conts, _ := client.ListContainers(docker.ListContainersOptions{All: false})
