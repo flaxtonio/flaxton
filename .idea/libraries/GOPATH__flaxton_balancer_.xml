@@ -1,0 +1,41 @@
+<component name="libraryTable">
+  <library name="GOPATH &lt;flaxton-balancer&gt;">
+    <CLASSES>
+      <root url="file://$PROJECT_DIR$/../flaxton/src/fx-tweet-poster" />
+      <root url="file://$PROJECT_DIR$/../flaxton/src/flaxton" />
+      <root url="file://$PROJECT_DIR$/../flaxton/src/lib" />
+      <root url="file://$PROJECT_DIR$/../flaxton/src/FNTP" />
+      <root url="file://$PROJECT_DIR$/../flaxton/src/github.com" />
+      <root url="file://$PROJECT_DIR$/../flaxton/src/Balancer" />
+      <root url="file://$PROJECT_DIR$/../flaxton/src/logger-db-postgres" />
+      <root url="file://$PROJECT_DIR$/../flaxton/src/tcptunnel" />
+      <root url="file://$PROJECT_DIR$/../flaxton/src/dashboard-db" />
+      <root url="file://$PROJECT_DIR$/../flaxton/src/Proxy" />
+      <root url="file://$PROJECT_DIR$/../flaxton/src/system" />
+      <root url="file://$PROJECT_DIR$/../flaxton/src/tests" />
+      <root url="file://$PROJECT_DIR$/../flaxton/src/faws" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+    <excluded>
+      <root url="file://$PROJECT_DIR$/../flaxton/src/github.com/docker/docker/hack/make/.build-deb" />
+      <root url="file://$PROJECT_DIR$/../flaxton/src/github.com/docker/libcontainer/.git" />
+      <root url="file://$PROJECT_DIR$/../flaxton/src/fx-tweet-poster/go-jsonpointer/testdata" />
+      <root url="file://$PROJECT_DIR$/../flaxton/src/github.com/docker/libcontainer/vendor/src/github.com/godbus/dbus/_examples" />
+      <root url="file://$PROJECT_DIR$/../flaxton/src/github.com/godbus/dbus/.git" />
+      <root url="file://$PROJECT_DIR$" />
+      <root url="file://$PROJECT_DIR$/../flaxton/src/github.com/docker/docker/docs/sources/reference/api/_static" />
+      <root url="file://$PROJECT_DIR$/../flaxton/src/github.com/docker/docker/vendor/src/code.google.com/p/go.net/html/testdata" />
+      <root url="file://$PROJECT_DIR$/../flaxton/src/github.com/docker/docker/vendor/src/github.com/godbus/dbus/_examples" />
+      <root url="file://$PROJECT_DIR$/../flaxton/src/github.com/godbus/dbus/_examples" />
+      <root url="file://$PROJECT_DIR$/../flaxton/src/github.com/docker/docker/.git" />
+      <root url="file://$PROJECT_DIR$/../flaxton/src/github.com/docker/docker/vendor/src/code.google.com/p/go/src/pkg/archive/tar/testdata" />
+      <root url="file://$PROJECT_DIR$/../flaxton/src/github.com/Sirupsen/logrus/.git" />
+      <root url="file://$PROJECT_DIR$/../flaxton/src/github.com/syndtr/gocapability/.git" />
+      <root url="file://$PROJECT_DIR$/../flaxton/src/github.com/docker/docker/pkg/tarsum/testdata" />
+      <root url="file://$PROJECT_DIR$/../flaxton/src/fx-tweet-poster/gojson/testdata" />
+      <root url="file://$PROJECT_DIR$/../flaxton/src/github.com/coreos/go-systemd/.git" />
+      <root url="file://$PROJECT_DIR$/../flaxton/src/github.com/docker/docker/pkg/archive/testdata" />
+    </excluded>
+  </library>
+</component>
