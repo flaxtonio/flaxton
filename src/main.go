@@ -28,6 +28,7 @@ func main() {
 //            client.RemoveContainer(docker.RemoveContainerOptions{ID: con.ID})
             inspect, _ := client.InspectContainer(con.ID)
             ret_ips = append(ret_ips, inspect.NetworkSettings.IPAddress)
+		fmt.Println(inspect.NetworkSettings.IPAddress)
         }
         return ret_ips
     }
