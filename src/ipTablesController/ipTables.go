@@ -43,8 +43,8 @@ func GetIpTables() (IpTables, error) {
 func forward_role(local_port, remote_adr, protocol, add_delete string) (cmd *exec.Cmd) {
 	cmd = exec.Command(IpTablesCMD, "-t", "nat", add_delete, "PREROUTING", "-p", protocol,
 		"--dport", local_port, "-j", "DNAT", "--to-destination", remote_adr)
-	cmd = exec.Command(IpTablesCMD, "-t", "nat", add_delete, "OUTPUT", "-p", protocol,
-		"--dport", local_port, "-j", "DNAT", "--to-destination", remote_adr)
+//	cmd = exec.Command(IpTablesCMD, "-t", "nat", add_delete, "OUTPUT", "-p", protocol,
+//		"--dport", local_port, "-j", "DNAT", "--to-destination", remote_adr)
 	return
 }
 
