@@ -5,8 +5,14 @@ package ipTablesController
 FOR PORT FORWARDING
 
 sysctl net.ipv4.ip_forward=1
-//iptables -t nat -A PREROUTING -p tcp --dport port -j DNAT --to-destination ip:port
+
+// For Remote routing
+iptables -t nat -A PREROUTING -p tcp --dport port -j DNAT --to-destination ip:port
+
+// For Local routing
 iptables -t nat -A OUTPUT -m addrtype --src-type LOCAL --dst-type LOCAL -p tcp --sport [source_port] --dport [dest_port] -j DNAT --to-destination [ip]
+
+// For adding forwarding
 iptables -t nat -A POSTROUTING -j MASQUERADE
 
 */
@@ -24,19 +30,39 @@ const (
 type IpTables struct {
 }
 
-func GetIpTables() (IpTables, error) {
-	tb := IpTables{}
+func EnableForwarding() error {
 	cmd1 := exec.Command("sysctl", "net.ipv4.ip_forward=1") // Making IPV4 able to forward
 	e := cmd1.Run()
 	if e != nil {
-		return tb, e
+		return e
 	}
 	// Adding prerouting on forward
 	cmd2 := exec.Command(IpTablesCMD, "-t", "nat", "-A", "POSTROUTING", "-j", "MASQUERADE")
 	e2 := cmd2.Run()
 	if e2 != nil {
-		return tb, e2
+		return e2
 	}
+	return nil
+}
+
+func DisableForwarding() error {
+	cmd1 := exec.Command("sysctl", "net.ipv4.ip_forward=0") // Making IPV4 able to forward
+	e := cmd1.Run()
+	if e != nil {
+		return e
+	}
+	// Adding prerouting on forward
+	cmd2 := exec.Command(IpTablesCMD, "-t", "nat", "-D", "POSTROUTING", "-j", "MASQUERADE")
+	e2 := cmd2.Run()
+	if e2 != nil {
+		return e2
+	}
+	return nil
+}
+
+func GetIpTables() (IpTables, error) {
+	tb := IpTables{}
+	EnableForwarding()
 	return tb, nil
 }
 

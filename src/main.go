@@ -1,7 +1,6 @@
 package main
 
 import (
-    "fmt"
     "ipTablesController"
     "github.com/fsouza/go-dockerclient"
 )
@@ -28,11 +27,10 @@ func main() {
 //            client.RemoveContainer(docker.RemoveContainerOptions{ID: con.ID})
             inspect, _ := client.InspectContainer(con.ID)
             ret_ips = append(ret_ips, inspect.NetworkSettings.IPAddress)
-		fmt.Println(inspect.NetworkSettings.IPAddress)
+//		fmt.Println(inspect.NetworkSettings.IPAddress)
         }
         return ret_ips
     }
-    fmt.Println(callback())
     ipRouting := ipTablesController.InitRouting("tcp", 80,callback)
     ipRouting.StartRouting()
 }

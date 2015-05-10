@@ -1,9 +1,11 @@
 package ipTablesController
 
 import (
-	"fmt"
 	"time"
 	"strconv"
+	"os"
+	"os/signal"
+	"syscall"
 )
 
 type IpListFunction func() []string
@@ -11,6 +13,7 @@ type IpListFunction func() []string
 type IpTableRouting struct {
 	ServerIpListCallback IpListFunction
 	RoutingPort int
+	RoutingPortStr string
 	RoutingProtocol string
 }
 
@@ -19,6 +22,7 @@ func InitRouting(protocol string, port int, f IpListFunction) IpTableRouting {
 		ServerIpListCallback: f,
 		RoutingPort: port,
 		RoutingProtocol: protocol,
+		RoutingPortStr: strconv.Itoa(port),
 	}
 }
 
@@ -32,24 +36,44 @@ func (ip *IpTableRouting) StartRouting() {
 	tablesCMD, _ = GetIpTables()
 	// Getting IP list for servers
 	server_ips = ip.ServerIpListCallback()
-	fmt.Println(server_ips)
+
 	// Checking Servers
 	go func(){
 		for {
 			server_ips = ip.ServerIpListCallback()
-			time.Sleep(time.Second * 1)
+			time.Sleep(time.Second * 2)
 		}
 	} ()
 
+	// Handle Exit
+	sigc := make(chan os.Signal, 1)
+	signal.Notify(sigc,
+		syscall.SIGINT,
+		syscall.SIGHUP,
+		syscall.SIGTERM,
+		syscall.SIGKILL,
+		syscall.SIGQUIT)
+	go func() {
+		_ = <-sigc
+		// Delete all rules for routing
+		for _, ip_addr := range server_ips  {
+			tablesCMD.ClearForwardIp(ip.RoutingPortStr, ip_addr, ip.RoutingProtocol)
+		}
+		DisableForwarding()
+		os.Exit(1)
+	}()
+
+	var ip_addr string
+
 	// Starting IP tables forward routing
 	for {
-		for _, ip_addr := range server_ips  {
+		for _, ip_addr = range server_ips  {
 			if prev_ip != "" {
-				tablesCMD.ClearForwardIp(strconv.Itoa(ip.RoutingPort), prev_ip, ip.RoutingProtocol)
+				tablesCMD.ClearForwardIp(ip.RoutingPortStr, prev_ip, ip.RoutingProtocol)
 			}
-			tablesCMD.ForwardIp(strconv.Itoa(ip.RoutingPort), prev_ip, ip.RoutingProtocol)
+			tablesCMD.ForwardIp(ip.RoutingPortStr, ip_addr, ip.RoutingProtocol)
 			prev_ip = ip_addr
-			time.Sleep(time.Millisecond * 100)
+			time.Sleep(time.Millisecond * 500)
 		}
 	}
 }
