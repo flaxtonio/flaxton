@@ -3,11 +3,19 @@ package main
 import (
     "ipTablesController"
     "github.com/fsouza/go-dockerclient"
+    "os"
+    "fmt"
 )
 
 func main() {
     endpoint := "unix:///var/run/docker.sock"
     client, _ := docker.NewClient(endpoint)
+    imgs, img_err := client.ListImages(docker.ListImagesOptions{All: false})
+    if img_err != nil {
+        fmt.Println(img_err.Error())
+    }
+    fmt.Println(imgs[0].RepoTags)
+    os.Exit(1)
 //    fmt.Println(client.Info())
 //    imgs, _ := client.ListImages(docker.ListImagesOptions{All: false})
 //    for _, img := range imgs {
