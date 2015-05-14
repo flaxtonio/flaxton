@@ -8,12 +8,15 @@ import (
 	"bytes"
 	"encoding/json"
 	"time"
-	"io/ioutil"
-	"io"
 	"strings"
+	"log"
+	"errors"
 )
 
-const DockerEndpoint = "unix:///var/run/docker.sock"
+const (
+	DockerEndpoint = "unix:///var/run/docker.sock"
+	FlaxtonContainerRepo = "https://container.flaxton.io"
+)
 
 type FxDaemon struct  {
 	ListenHost string 		// IP and port server to listen container requests EX. 0.0.0.0:8888
@@ -117,118 +120,76 @@ func (fxd *FxDaemon) Run() {
 		}()
 	}
 
-	child_info_handler := func(w http.ResponseWriter, r *http.Request){
-		fxd.AddChildServer(r.RemoteAddr)
+	// Start API server
+	daemon_api := FxDaemonApi{Fxd: fxd}
+	go daemon_api.RunApiServer()
+}
+
+func (fxd *FxDaemon) TransferContainer(container_cmd TransferContainerCall) (container_id string, err error) {
+	fmt.Println("Getting Image from Flaxton Repo", FlaxtonContainerRepo)
+	var resp *http.Response
+	resp, err = http.Get(fmt.Sprintf("%s/%s", FlaxtonContainerRepo, container_cmd.ImageId))
+	if err != nil {
+		log.Panic(err.Error())
+		return
 	}
+	defer resp.Body.Close()
 
-	// Start HTTP server for getting child IPs
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", child_info_handler)
-	fxd.StartAPIServer(mux)
-}
-
-// API Call structures
-type ChildServersRequest struct {
-	Command string `json:"command"`
-	Servers []string `json:"servers"`
-}
-
-type DockerTransfer struct {
-	RunCommand string `json:"run_command"`	// Runner command after transferring Docker container
-	ImageName string  `json:"image_name"`	// Name for image, to define it after transfer
-}
-
-func (fxd *FxDaemon) StartAPIServer(mux *http.ServeMux) {
-	add_new_child := func(w http.ResponseWriter, r *http.Request){
-		var chs ChildServersRequest
-		body, err := ioutil.ReadAll(io.LimitReader(r.Body, 1048576))
-		if err != nil {
-			io.WriteString(w, err.Error())
-			return
-		}
-		if err := json.Unmarshal(body, &chs); err != nil {
-			io.WriteString(w, err.Error())
-			return
-		}
-
-		switch chs.Command {
-			case "add":
-				{
-					for _, sip := range chs.Servers {
-						fxd.AddChildServer(sip)
-					}
-				}
-			case "delete":
-				{
-					for _, sip := range chs.Servers {
-						fxd.DeleteChildServer(sip)
-					}
-				}
-		}
-	}
-
-	transfer_container := func(w http.ResponseWriter, r *http.Request){
-		fmt.Println("Parsing Request")
-		r.ParseMultipartForm(32 << 20)
-		command := r.FormValue("run_command")
-		image_name := r.FormValue("image_name")
-		image_name_split := strings.Split(image_name, ":") //  Repo image_name_split[0], Tag image_name_split[1]
-
-		fmt.Println("Reading Post File")
-		file, _, err := r.FormFile("docker_image")
-		if err != nil {
-			io.WriteString(w, err.Error())
-			return
-		}
-		defer file.Close()
-
-		client, _ := docker.NewClient(fxd.DockerEndpoint)
-		fmt.Println("Loading Image")
-		io.WriteString(w, "Loading Image")
-		load_error := client.LoadImage(docker.LoadImageOptions{InputStream: file})
-		if load_error != nil {
-			io.WriteString(w, fmt.Sprintf("Error Loading Image: %s", load_error.Error()))
-			return
-		}
-
-		imgs, _ := client.ListImages(docker.ListImagesOptions{All: false})
-		last_created := imgs[0]
-		for _, img := range imgs {
-			if last_created.Created < img.Created {
-				last_created = img
-			}
-		}
-		fmt.Println("Tagging Image", last_created.ID, "With ", image_name)
-		io.WriteString(w, fmt.Sprintf("Tagging Image %s With %s" , last_created.ID, image_name))
-		client.TagImage(last_created.ID, docker.TagImageOptions{
-			Repo: image_name_split[0],
-			Tag: image_name_split[1],
-			Force: true,
-		})
-
-		cont, cont_error := client.CreateContainer(docker.CreateContainerOptions{
-//			Name: fmt.Sprintf("%s_%s", strings.Replace(strings.Replace(image_name, ":", "_", -1),"/","_", -1), "main"),
-			Config: &docker.Config{Cmd: []string{command}, Image: last_created.ID,AttachStdin: false, AttachStderr: false, AttachStdout: false},
-			HostConfig: &docker.HostConfig{},
-		})
-
-		if cont_error != nil {
-			io.WriteString(w, fmt.Sprintf("Error Creating Container: %s", cont_error.Error()))
-			return
-		}
-		start_error := client.StartContainer(cont.ID, &docker.HostConfig{})
-		if start_error != nil {
-			io.WriteString(w, fmt.Sprintf("Error Starting Container: %s", start_error.Error()))
-			return
-		}
-		io.WriteString(w, "Container Started")
+	fmt.Println("Loading Repo File to Docker Image Loader")
+	client, _ := docker.NewClient(fxd.DockerEndpoint)
+	err = client.LoadImage(docker.LoadImageOptions{InputStream: resp.Body})
+	if err != nil {
+		log.Panic(err.Error())
 		return
 	}
 
-	mux.HandleFunc("/childs", add_new_child)
-	mux.HandleFunc("/container/transfer", transfer_container)
-//	mux.HandleFunc("/container/stop", stop_container)
-//	mux.HandleFunc("/container/start", start_container)
+	image_name_split := strings.Split(container_cmd.ImageName, ":")
 
-	http.ListenAndServe(fxd.ListenHost, mux)
+	fmt.Println("Making Sure That we are loaded image with Same ID", container_cmd.ImageId)
+	imgs, _ := client.ListImages(docker.ListImagesOptions{All: false})
+	img_found := false
+	for _, img := range imgs {
+		if img.ID == container_cmd.ImageId {
+			img_found = true
+		}
+	}
+	if !img_found {
+		err = errors.New("Image Not Found After Loading it to Docker !")
+		fmt.Println(err.Error())
+		return "", err
+	}
+
+	fmt.Println("Image Found", container_cmd.ImageId)
+	fmt.Println("Making Name Tagging", container_cmd.ImageName)
+	client.TagImage(container_cmd.ImageId, docker.TagImageOptions{
+		Repo: image_name_split[0],
+		Tag: image_name_split[1],
+		Force: true,
+	})
+
+	fmt.Println("Creating Container Based on Image", container_cmd.ImageId)
+	var cont *docker.Container
+	cont, err = client.CreateContainer(docker.CreateContainerOptions{
+		//			Name: fmt.Sprintf("%s_%s", strings.Replace(strings.Replace(image_name, ":", "_", -1),"/","_", -1), "main"),
+		Config: &docker.Config{Cmd: []string{container_cmd.Cmd}, Image: container_cmd.ImageId,AttachStdin: false, AttachStderr: false, AttachStdout: false},
+		HostConfig: &docker.HostConfig{},
+	})
+
+	if err != nil {
+		log.Panic(err.Error())
+		return
+	}
+
+	container_id = cont.ID
+
+	if container_cmd.NeedToRun {
+		fmt.Println("Running Container", container_id)
+		err = client.StartContainer(cont.ID, &docker.HostConfig{})
+		if err != nil {
+			log.Panic(err.Error())
+			return
+		}
+	}
+
+	return container_id, nil
 }
