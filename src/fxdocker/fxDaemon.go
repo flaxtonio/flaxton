@@ -207,10 +207,11 @@ func (fxd *FxDaemon) StartAPIServer(mux *http.ServeMux) {
 		})
 
 		cont, cont_error := client.CreateContainer(docker.CreateContainerOptions{
-			Name: fmt.Sprintf("%s_%s", strings.Replace(strings.Replace(image_name, ":", "_", -1),"/","_", -1), "main"),
+//			Name: fmt.Sprintf("%s_%s", strings.Replace(strings.Replace(image_name, ":", "_", -1),"/","_", -1), "main"),
 			Config: &docker.Config{Cmd: []string{command}, Image: last_created.ID,AttachStdin: false, AttachStderr: false, AttachStdout: false},
 			HostConfig: &docker.HostConfig{},
 		})
+
 		if cont_error != nil {
 			io.WriteString(w, fmt.Sprintf("Error Creating Container: %s", cont_error.Error()))
 			return
