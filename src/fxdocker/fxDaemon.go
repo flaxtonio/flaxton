@@ -189,27 +189,30 @@ func (fxd *FxDaemon) StartAPIServer(mux *http.ServeMux) {
 		}
 
 		imgs, _ := client.ListImages(docker.ListImagesOptions{All: false})
+		last_created := imgs[0]
 		for _, img := range imgs {
-			fmt.Println(img.RepoTags[0], image_name)
-			if img.RepoTags[0] == image_name {
-				cont, cont_error := client.CreateContainer(docker.CreateContainerOptions{
-					Name: fmt.Sprintf("%s_%s", strings.Replace(strings.Replace(image_name, ":", "_", -1),"/","_", -1), "main"),
-					Config: &docker.Config{Cmd: []string{command}, Image: img.RepoTags[0],AttachStdin: false, AttachStderr: false, AttachStdout: false},
-					HostConfig: &docker.HostConfig{},
-				})
-				if cont_error != nil {
-					io.WriteString(w, fmt.Sprintf("Error Creating Container: %s", cont_error.Error()))
-					return
-				}
-				start_error := client.StartContainer(cont.ID, &docker.HostConfig{})
-				if start_error != nil {
-					io.WriteString(w, fmt.Sprintf("Error Starting Container: %s", start_error.Error()))
-					return
-				}
-				io.WriteString(w, "Container Started")
-				return
+			fmt.Println(img.RepoTags[0], image_name, img.Created)
+			if last_created.Created > img.Created {
+				last_created = img
 			}
 		}
+
+		cont, cont_error := client.CreateContainer(docker.CreateContainerOptions{
+			Name: fmt.Sprintf("%s_%s", strings.Replace(strings.Replace(image_name, ":", "_", -1),"/","_", -1), "main"),
+			Config: &docker.Config{Cmd: []string{command}, Image: last_created.RepoTags[0],AttachStdin: false, AttachStderr: false, AttachStdout: false},
+			HostConfig: &docker.HostConfig{},
+		})
+		if cont_error != nil {
+			io.WriteString(w, fmt.Sprintf("Error Creating Container: %s", cont_error.Error()))
+			return
+		}
+		start_error := client.StartContainer(cont.ID, &docker.HostConfig{})
+		if start_error != nil {
+			io.WriteString(w, fmt.Sprintf("Error Starting Container: %s", start_error.Error()))
+			return
+		}
+		io.WriteString(w, "Container Started")
+		return
 	}
 
 	mux.HandleFunc("/childs", add_new_child)
