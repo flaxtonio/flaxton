@@ -73,7 +73,8 @@ func (ip *IpTableRouting) StartRouting() {
 			}
 			tablesCMD.ForwardIp(ip.RoutingPortStr, ip_addr, ip.RoutingProtocol)
 			prev_ip = ip_addr
-			time.Sleep(time.Millisecond * 500)
+			time.Sleep(time.Millisecond * 100)
 		}
+		time.Sleep(time.Millisecond * 200)
 	}
 }
