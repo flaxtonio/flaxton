@@ -172,6 +172,7 @@ func (fxd *FxDaemon) StartAPIServer(mux *http.ServeMux) {
 		r.ParseMultipartForm(32 << 20)
 		command := r.FormValue("run_command")
 		image_name := r.FormValue("image_name")
+		image_name_split := strings.Split(image_name, ":") //  Repo image_name_split[0], Tag image_name_split[1]
 
 		fmt.Println("Reading Post File")
 		file, _, err := r.FormFile("docker_image")
@@ -197,8 +198,14 @@ func (fxd *FxDaemon) StartAPIServer(mux *http.ServeMux) {
 				last_created = img
 			}
 		}
+		fmt.Println("Tagging Image", last_created.ID, "With ", image_name)
+		io.WriteString(w, fmt.Sprintf("Tagging Image %s With %s" , last_created.ID, image_name))
+		client.TagImage(last_created.ID, docker.TagImageOptions{
+			Repo: image_name_split[0],
+			Tag: image_name_split[1],
+			Force: true,
+		})
 
-		fmt.Println(last_created.RepoTags[0], image_name, last_created.ID)
 		cont, cont_error := client.CreateContainer(docker.CreateContainerOptions{
 			Name: fmt.Sprintf("%s_%s", strings.Replace(strings.Replace(image_name, ":", "_", -1),"/","_", -1), "main"),
 			Config: &docker.Config{Cmd: []string{command}, Image: last_created.ID,AttachStdin: false, AttachStderr: false, AttachStdout: false},
