@@ -77,43 +77,45 @@ func (fxd *FxDaemon) Run() {
 
 
 	// Send State to Parents every 1 Second
-	go func() {
-		var (
-			cont_str []byte
-			cont_err error
-			req *http.Request
-			req_err error
-			client *http.Client
-			resp *http.Response
-			resp_error error
-		)
+	if len(fxd.ParentHosts) > 0 {
+		go func() {
+			var (
+				cont_str []byte
+				cont_err error
+				req *http.Request
+				req_err error
+				client *http.Client
+				resp *http.Response
+				resp_error error
+			)
 
-		for {
-			cont_err = nil
-			req_err = nil
-			resp_error = nil
-			cont_str, cont_err = json.Marshal(fxd.containers)
-			if cont_err == nil {
-				for _, p := range fxd.ParentHosts  {
-					req, req_err = http.NewRequest("POST", fmt.Sprintf("http://%s", p), bytes.NewBuffer(cont_str))
-					if req_err != nil {
-						fmt.Println(resp_error.Error())
-						continue
-					}
-					req.Header.Set("Content-Type", "application/json")
+			for {
+				cont_err = nil
+				req_err = nil
+				resp_error = nil
+				cont_str, cont_err = json.Marshal(fxd.containers)
+				if cont_err == nil {
+					for _, p := range fxd.ParentHosts  {
+						req, req_err = http.NewRequest("POST", fmt.Sprintf("http://%s", p), bytes.NewBuffer(cont_str))
+						if req_err != nil {
+							fmt.Println(resp_error.Error())
+							continue
+						}
+						req.Header.Set("Content-Type", "application/json")
 
-					client = &http.Client{}
-					resp, resp_error = client.Do(req)
-					if resp_error != nil {
-						panic(resp_error)
+						client = &http.Client{}
+						resp, resp_error = client.Do(req)
+						if resp_error != nil {
+							panic(resp_error)
+						}
+						defer resp.Body.Close()
+						// TODO: Maybe we will need to read parent response body !
 					}
-					defer resp.Body.Close()
-					// TODO: Maybe we will need to read parent response body !
 				}
+				time.Sleep(time.Second * 1)
 			}
-			time.Sleep(time.Second * 1)
-		}
-	}()
+		}()
+	}
 
 	child_info_handler := func(w http.ResponseWriter, r *http.Request){
 		fxd.AddChildServer(r.RemoteAddr)
