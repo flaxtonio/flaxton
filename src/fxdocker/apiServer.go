@@ -31,7 +31,7 @@ func (fx_api *FxDaemonApi) RunApiServer() {
 
 type ChildrenCall struct {
 	Type 	string 		`json:"type"`
-	Hosts 	[]string 		`json:"hosts"`
+	Hosts 	[]string 	`json:"hosts"`
 }
 
 func (fx_api *FxDaemonApi) ChildServers(w rest.ResponseWriter, r *rest.Request){
