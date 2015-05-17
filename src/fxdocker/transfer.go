@@ -18,7 +18,8 @@ var (
 
 func FlaxtonConsoleLogin(username, password string) string {
 	fmt.Println("Sending request to ", FlaxtonLoginUrl)
-	json_strB := []byte(fmt.Sprintf(`{"username": %s, "password": %s}`, username, password))
+	json_strB := []byte(fmt.Sprintf(`{"username": "%s", "password": "%s"}`, username, password))
+	fmt.Println(string(json_strB))
 	req, err := http.NewRequest("POST", FlaxtonLoginUrl, bytes.NewBuffer(json_strB))
 	if err != nil {
 		log.Fatal(err)
@@ -33,16 +34,31 @@ func FlaxtonConsoleLogin(username, password string) string {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != 200 {
-		fmt.Println("Server Response Error")
-		os.Exit(1)
+	switch resp.StatusCode {
+		case 200:
+			{
+				fmt.Println("Username and Password validated !")
+			}
+		case 401:
+			{
+				fmt.Println("Invalid Username or Password")
+				fmt.Println("If you don't have account please register it here http://flaxton.io")
+				os.Exit(1)
+			}
+		default:
+			{
+				fmt.Println("Server Response Error")
+				os.Exit(1)
+			}
 	}
+
 	body, read_error := ioutil.ReadAll(resp.Body)
 	if read_error != nil {
 		fmt.Println("Error Reading Response Body ! ")
 		panic(read_error)
 		os.Exit(1)
 	}
+	fmt.Println(string(body))
 	var authorization_cb interface{}
 	json_error := json.Unmarshal(body, &authorization_cb)
 	if json_error != nil {
@@ -74,6 +90,7 @@ func TransferContainer(container_id, repo_name, dest_host string, transfer_and_r
 		ImageName: repo_name,
 		ImageId: container.Image,
 		NeedToRun: transfer_and_run,
+		Authorization: authorization,
 	}
 
 	body := &bytes.Buffer{}
@@ -99,7 +116,7 @@ func TransferContainer(container_id, repo_name, dest_host string, transfer_and_r
 		os.Exit(1)
 	}
 
-	request, err2 := http.NewRequest("POST", fmt.Sprintf("http://%s/images/add", FlaxtonContainerRepo), body)
+	request, err2 := http.NewRequest("POST", fmt.Sprintf("%s/images/add", FlaxtonContainerRepo), body)
 	if err2 != nil {
 		log.Fatal(err2)
 		os.Exit(1)

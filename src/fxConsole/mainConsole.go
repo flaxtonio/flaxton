@@ -8,6 +8,7 @@ import (
 	"os"
 	"crypto/md5"
 	"github.com/Sirupsen/logrus"
+	"encoding/hex"
 )
 
 var (
@@ -24,8 +25,7 @@ func RunArguments(args []string) {
 	}
 
 	switch args[1] {
-		case "-d":
-		case "daemon":
+		case "-d", "daemon":
 			{
 				daemon := fxdocker.FxDaemon{}
 				daemon.DockerEndpoint = fxdocker.DockerEndpoint
@@ -40,10 +40,7 @@ func RunArguments(args []string) {
 							{
 								daemon.BalancerPort, _ = strconv.Atoi(next_args[i+1])
 							}
-
-					case "-help":
-					case "help":
-					case "-h":
+					case "help", "-h", "-help":
 						{
 							fmt.Println("This command is for Starting Flaxton daemon load balancer and daemon API server")
 							fmt.Println("Formant: flaxton daemon <OPTIONS>")
@@ -54,11 +51,11 @@ func RunArguments(args []string) {
 						}
 					}
 				}
-				fmt.Println("Starting Flaxton Daemon on Address: %s", daemon.ListenHost)
+				fmt.Println("Starting Flaxton Daemon on Address: ", daemon.ListenHost)
 				daemon.Run()
 			}
-		case "-t":
-		case "transfer":
+
+		case "-t", "transfer":
 			{
 				if len(console_config.Authorization) == 0 {
 					fmt.Printf("For this operation you need to login using your flaxton.io creditailes")
@@ -93,9 +90,7 @@ func RunArguments(args []string) {
 									need_to_run = true
 								}
 							}
-						case "-help":
-						case "help":
-						case "-h":
+						case "help", "-h", "-help":
 							{
 								fmt.Println("This command is for transfering container to another Flaxton Daemon")
 								fmt.Println("Formant: flaxton transfer <OPTIONS>")
@@ -111,9 +106,7 @@ func RunArguments(args []string) {
 
 				fxdocker.TransferContainer(container_id, repo_name, destination, need_to_run, console_config.Authorization)
 			}
-
-		case "-l":
-		case "login":
+		case "-l", "login":
 			{
 				var (
 					username = ""
@@ -128,12 +121,11 @@ func RunArguments(args []string) {
 						}
 					case "-p":
 						{
-							md5_pass := md5.Sum([]byte(next_args[i+1]))
-							password = string(md5_pass[:])
+							hasher := md5.New()
+							hasher.Write([]byte(next_args[i+1]))
+							password = hex.EncodeToString(hasher.Sum(nil))
 						}
-					case "-help":
-					case "help":
-					case "-h":
+					case "help", "-h", "-help":
 						{
 							fmt.Println("This command is for sign in to flaxton.io service for transfering and using containers on large clusters")
 							fmt.Println("Formant: flaxton login <OPTIONS>")
@@ -146,6 +138,7 @@ func RunArguments(args []string) {
 				}
 
 				console_config.Authorization = fxdocker.FlaxtonConsoleLogin(username, password)
+				console_config.Username = username
 				console_config.SaveConfig()
 				fmt.Println("Login Successful !")
 			}

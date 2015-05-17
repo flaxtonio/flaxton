@@ -15,7 +15,7 @@ import (
 
 const (
 	DockerEndpoint = "unix:///var/run/docker.sock"
-	FlaxtonContainerRepo = "https://container.flaxton.io"
+	FlaxtonContainerRepo = "http://127.0.0.1:8080"
 )
 
 type FxDaemon struct  {
@@ -122,15 +122,18 @@ func (fxd *FxDaemon) Run() {
 
 	// Start API server
 	daemon_api := FxDaemonApi{Fxd: fxd}
-	go daemon_api.RunApiServer()
+	daemon_api.RunApiServer()
 }
 
 func (fxd *FxDaemon) TransferContainer(container_cmd TransferContainerCall) (container_id string, err error) {
 	fmt.Println("Getting Image from Flaxton Repo", FlaxtonContainerRepo)
 	var resp *http.Response
-	resp, err = http.Get(fmt.Sprintf("%s/%s", FlaxtonContainerRepo, container_cmd.ImageId))
+	http_client := &http.Client{}
+	req, _ := http.NewRequest("GET", fmt.Sprintf("%s/images/%s", FlaxtonContainerRepo, container_cmd.ImageId), nil)
+	req.Header.Set("Authorization", container_cmd.Authorization)
+	resp, err = http_client.Do(req)
 	if err != nil {
-		log.Panic(err.Error())
+		fmt.Println(err.Error())
 		return
 	}
 	defer resp.Body.Close()

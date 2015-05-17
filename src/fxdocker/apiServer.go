@@ -76,6 +76,7 @@ type TransferContainerCall struct {
 	ImageName 	string			`json:"image_name"`
 	ImageId 	string          `json:"image_id"`
 	NeedToRun	bool        	`json:"need_to_run"`
+	Authorization string 		`json:"authorization"`
 }
 
 func (fx_api *FxDaemonApi) TransferContainer(w rest.ResponseWriter, r *rest.Request){

@@ -22,7 +22,7 @@ func (conf *ConsoleConfig) SaveConfig() {
 }
 
 func (conf *ConsoleConfig) LoadConfig() {
-	file, _ := os.Open("conf.json")
+	file, _ := os.Open(FlaxtonConfigFile)
 	decoder := json.NewDecoder(file)
 	err := decoder.Decode(conf)
 	if err != nil {
