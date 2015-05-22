@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"ipTablesController"
 	"github.com/fsouza/go-dockerclient"
-	"bytes"
 	"encoding/json"
 	"time"
 	"strings"
 	"log"
 	"errors"
+	"lib"
 )
 
 const (
@@ -18,15 +18,37 @@ const (
 	FlaxtonContainerRepo = "http://container.flaxton.io"
 )
 
+type ContainerInspect struct {
+	ID string 							`json:"id"`  // container ID
+	APIContainer docker.APIContainers 	`json:"api_container"`
+	InspectContainer *docker.Container 	`json:"inspect"`
+	TopCommand docker.TopResult 		`json:"top_command"`
+}
+
+var (
+	dockerClient *docker.Client
+	containers []ContainerInspect // Loac containers
+)
+
+type ErrorHandler func(error)
+
 type FxDaemon struct  {
 	ListenHost string 		// IP and port server to listen container requests EX. 0.0.0.0:8888
 	Authentication bool 	// Authentication enabled or not
 	AuthKey	string			// Username for authentication
-	ParentHosts []string 	// Parent Balancer IP port EX. 192.168.1.10:8888
+	ParentHost string 	// Parent Balancer IP port EX. 192.168.1.10:8888
 	BalancerPort int		// Port for Load Balancer
 	child_servers []string // Only for Private use
-	containers []docker.APIContainers // Loac containers
 	DockerEndpoint string // Docker daemon socket endpoint
+	Offline bool // if this parameter is true then Daemon will be running without flaxton.io communication
+	OnError ErrorHandler
+}
+
+func NewDaemon(docker_endpoint string, offline bool) (fxd FxDaemon) {
+	fxd.OnError = func(err error) {}
+	fxd.DockerEndpoint = docker_endpoint
+	fxd.Offline = offline
+	return
 }
 
 func (fxd *FxDaemon) EnableAuthorization(key string) {
@@ -34,6 +56,7 @@ func (fxd *FxDaemon) EnableAuthorization(key string) {
 	fxd.AuthKey = key //TODO: Here should be some encryption
 }
 
+// For Internal API calls
 func (fxd *FxDaemon) AddChildServer(addr string) {
 	contains := false
 	for _, ch := range fxd.child_servers  {
@@ -57,72 +80,111 @@ func (fxd *FxDaemon) DeleteChildServer(addr string) {
 	fxd.child_servers = append(new_ips, []string{}...)
 }
 
-func (fxd *FxDaemon) Run() {
-	client, _ := docker.NewClient(fxd.DockerEndpoint)
+type ChildServersCall struct {
+	Servers []string  `json:"servers"`
+}
 
-	// Starting Balancer for Containers and child servers
-	callback := func() []string {
-		ret_ips := make([]string, 0)
-		fxd.containers, _ = client.ListContainers(docker.ListContainersOptions{All: false})
-		for _, con := range fxd.containers {
-			inspect, _ := client.InspectContainer(con.ID)
-			ret_ips = append(ret_ips, inspect.NetworkSettings.IPAddress)
+func (fxd *FxDaemon) ChildServerGetter() {
+	var (
+		send_buf  = []byte("{}")
+		request_error error
+		child_servers ChildServersCall
+	)
+
+	for {
+		request_error = lib.PostJson(fmt.Sprintf("%s/childs", FlaxtonContainerRepo), send_buf, &child_servers)
+		if request_error != nil {
+			lib.LogError("Error from Child server getter", request_error)
 		}
-
-		for _, cs := range fxd.child_servers {
-			ret_ips = append(ret_ips, cs)
-		}
-
-		return ret_ips
+		fxd.child_servers = make([]string, 0)
+		fxd.child_servers = append(fxd.child_servers, child_servers.Servers...)
+		time.Sleep(time.Second * 2)
 	}
-	ipRouting := ipTablesController.InitRouting("tcp", fxd.BalancerPort,callback)
+}
+
+func (fxd *FxDaemon) containerInspector() {
+	var (
+		err error
+		dock_containers []docker.APIContainers
+		dock_inspect *docker.Container
+		dock_top docker.TopResult
+	)
+	dockerClient, err = docker.NewClient(fxd.DockerEndpoint)
+	if err != nil {
+		fxd.OnError(err)
+		return
+	}
+	for {
+		dock_containers, err = dockerClient.ListContainers(docker.ListContainersOptions{All: false})
+		if err != nil {
+			fxd.OnError(err)
+		} else {
+			containers = make([]ContainerInspect, 0)
+			for _, con := range dock_containers  {
+				dock_inspect, _ = dockerClient.InspectContainer(con.ID)
+				dock_top, _ = dockerClient.TopContainer(con.ID, "")
+				containers = append(containers, ContainerInspect{
+					ID:con.ID,
+					APIContainer: con,
+					InspectContainer:dock_inspect,
+					TopCommand:dock_top,
+				})
+			}
+		}
+		time.Sleep(time.Second * 2)
+	}
+}
+
+func (fxd *FxDaemon) ipTablesCallback() []string {
+	ret_ips := make([]string, 0)
+	for _, con := range containers {
+		ret_ips = append(ret_ips, con.InspectContainer.NetworkSettings.IPAddress)
+	}
+
+	for _, cs := range fxd.child_servers {
+		ret_ips = append(ret_ips, cs)
+	}
+
+	return ret_ips
+}
+
+func (fxd *FxDaemon) Run() {
+
+	go fxd.containerInspector()
+
+	ipRouting := ipTablesController.InitRouting("tcp", fxd.BalancerPort, fxd.ipTablesCallback)
 	go ipRouting.StartRouting()
 
-
-	// Send State to Parents every 1 Second
-	if len(fxd.ParentHosts) > 0 {
-		go func() {
-			var (
-				cont_str []byte
-				cont_err error
-				req *http.Request
-				req_err error
-				client *http.Client
-				resp *http.Response
-				resp_error error
-			)
-
-			for {
-				cont_err = nil
-				req_err = nil
-				resp_error = nil
-				cont_str, cont_err = json.Marshal(fxd.containers)
-				if cont_err == nil {
-					for _, p := range fxd.ParentHosts  {
-						req, req_err = http.NewRequest("POST", fmt.Sprintf("http://%s", p), bytes.NewBuffer(cont_str))
-						if req_err != nil {
-							fmt.Println(resp_error.Error())
-							continue
-						}
-						req.Header.Set("Content-Type", "application/json")
-
-						client = &http.Client{}
-						resp, resp_error = client.Do(req)
-						if resp_error != nil {
-							panic(resp_error)
-						}
-						defer resp.Body.Close()
-						// TODO: Maybe we will need to read parent response body !
-					}
-				}
-				time.Sleep(time.Second * 1)
-			}
-		}()
+	if !fxd.Offline {
+		go fxd.ParentNotifier()
+		go fxd.ChildServerGetter()
 	}
 
 	// Start API server
 	daemon_api := FxDaemonApi{Fxd: fxd}
 	daemon_api.RunApiServer()
+}
+
+// Sending Notification to base server and getting task list
+func (fxd *FxDaemon) ParentNotifier() {
+	var (
+		send_buf []byte
+		marshal_error error
+		request_error error
+	)
+
+	for {
+		send_buf, marshal_error = json.Marshal(containers)
+		if marshal_error != nil {
+			fxd.OnError(marshal_error)
+			return
+		}
+		request_error = lib.PostJson(fmt.Sprintf("%s/put", FlaxtonContainerRepo), send_buf, nil)
+		if request_error != nil {
+			lib.LogError("Error from Parent Notifier request service", request_error)
+		}
+		time.Sleep(time.Second * 1)
+	}
 }
 
 func (fxd *FxDaemon) TransferContainer(container_cmd TransferContainerCall) (container_id string, err error) {

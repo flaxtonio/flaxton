@@ -27,8 +27,7 @@ func RunArguments(args []string) {
 	switch args[1] {
 		case "-d", "daemon":
 			{
-				daemon := fxdocker.FxDaemon{}
-				daemon.DockerEndpoint = fxdocker.DockerEndpoint
+				daemon := fxdocker.NewDaemon(fxdocker.DockerEndpoint, false)
 				next_args := args[1:]
 				for i, arg := range args[1:]  {
 					switch arg {
@@ -40,15 +39,20 @@ func RunArguments(args []string) {
 							{
 								daemon.BalancerPort, _ = strconv.Atoi(next_args[i+1])
 							}
-					case "help", "-h", "-help":
-						{
-							fmt.Println("This command is for Starting Flaxton daemon load balancer and daemon API server")
-							fmt.Println("Formant: flaxton daemon <OPTIONS>")
-							fmt.Println("OPTIONS:")
-							fmt.Println("-host  : Listenning address for daemon server, example: 127.0.0.1:8888")
-							fmt.Println("-balancer-port  : Network port for load balancing trafic across docker containers and child servers")
-							os.Exit(1)
-						}
+						case "-offline":
+							{
+								daemon.Offline = true
+							}
+						case "help", "-h", "-help":
+							{
+								fmt.Println("This command is for Starting Flaxton daemon load balancer and daemon API server")
+								fmt.Println("Formant: flaxton daemon <OPTIONS>")
+								fmt.Println("OPTIONS:")
+								fmt.Println("-host  : Listenning address for daemon server, example: 127.0.0.1:8888")
+								fmt.Println("-balancer-port  : Network port for load balancing trafic across docker containers and child servers")
+								fmt.Println("-offline  : If this parameter exists, then daemon will be working without flaxton.io server")
+								os.Exit(1)
+							}
 					}
 				}
 				fmt.Println("Starting Flaxton Daemon on Address: ", daemon.ListenHost)
