@@ -59,15 +59,15 @@ func (fx_api *FxDaemonApi) ChildServers(w rest.ResponseWriter, r *rest.Request){
 	switch children.Type {
 		case "add":
 			{
-				for _, host := range children.Hosts  {
-					fx_api.Fxd.AddChildServer(host)
-				}
+//				for _, host := range children.Hosts  {
+//					fx_api.Fxd.AddChildServer(host)
+//				}
 			}
 		case "delete":
 			{
-				for _, host := range children.Hosts  {
-					fx_api.Fxd.DeleteChildServer(host)
-				}
+//				for _, host := range children.Hosts  {
+//					fx_api.Fxd.DeleteChildServer(host)
+//				}
 			}
 		default:
 			{

@@ -23,10 +23,10 @@ type TransferResponse struct {
 
 // TaskStack types
 const (
-	TaskContainerTransfer = 1
+	TaskContainerTransfer = "container_transfer"
 )
 
-type TaskType int
+type TaskType string
 
 type Task struct  {
 	TaskID string       `json:"task_id"`
