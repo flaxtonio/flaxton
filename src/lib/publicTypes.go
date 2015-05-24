@@ -26,5 +26,12 @@ type Task struct  {
 	Data interface{} 	`json:"data"`
 	Cron bool 			`json:"cron"`
 	StartTime time.Time `json:"start_time"`
-	UntilTime time.Time `json:"until_time"`
+	EndTime time.Time 	`json:"end_time"`
+}
+type TaskResult struct  {
+	TaskID string       `json:"task_id"`
+	StartTime time.Time `json:"start_time"`
+	EndTime time.Time 	`json:"end_time"`
+	Error bool          `json:"error"`
+	Message string      `json:"message"`
 }

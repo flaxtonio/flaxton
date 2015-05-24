@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 )
 
-func PostJson(url string, data []byte, obj interface{}) error {
+func PostJson(url string, data []byte, obj interface{}, auth string) error {
 	var (
 		req *http.Request
 		req_err error
@@ -16,6 +16,7 @@ func PostJson(url string, data []byte, obj interface{}) error {
 		return req_err
 	}
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", auth)
 
 	client := &http.Client{}
 	resp, resp_error := client.Do(req)
