@@ -10,6 +10,7 @@ import (
 type ConsoleConfig struct {
 	Username string			`json:"username"`
 	Authorization string 	`json:"authorization"`
+	DaemonID string 		`json:"daemon_id"`
 }
 
 func (conf *ConsoleConfig) SaveConfig() {

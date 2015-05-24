@@ -33,6 +33,7 @@ var (
 type ErrorHandler func(error)
 
 type FxDaemon struct  {
+	ID string				// Random generated string for identification specific Daemon
 	ListenHost string 		// IP and port server to listen container requests EX. 0.0.0.0:8888
 	Authentication bool 	// Authentication enabled or not
 	AuthKey	string			// Username for authentication
@@ -165,7 +166,9 @@ func (fxd *FxDaemon) Run() {
 	daemon_api.RunApiServer()
 }
 
-// Sending Notification to base server and getting task list
+// TODO: ADD TASK STACK !!!
+
+// Sending Notification to base server
 func (fxd *FxDaemon) ParentNotifier() {
 	var (
 		send_buf []byte
@@ -187,7 +190,7 @@ func (fxd *FxDaemon) ParentNotifier() {
 	}
 }
 
-func (fxd *FxDaemon) TransferContainer(container_cmd TransferContainerCall) (container_id string, err error) {
+func (fxd *FxDaemon) TransferContainer(container_cmd lib.TransferContainerCall) (container_id string, err error) {
 	fmt.Println("Getting Image from Flaxton Repo", FlaxtonContainerRepo)
 	var resp *http.Response
 	http_client := &http.Client{}

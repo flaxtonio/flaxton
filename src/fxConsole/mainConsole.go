@@ -9,6 +9,7 @@ import (
 	"crypto/md5"
 	"github.com/Sirupsen/logrus"
 	"encoding/hex"
+	"lib"
 )
 
 var (
@@ -28,6 +29,13 @@ func RunArguments(args []string) {
 		case "-d", "daemon":
 			{
 				daemon := fxdocker.NewDaemon(fxdocker.DockerEndpoint, false)
+				if len(console_config.DaemonID) == 0 {
+					fmt.Println("Generating ID for this server")
+					console_config.DaemonID = lib.RandomString(25)
+					fmt.Println(console_config.DaemonID)
+					console_config.SaveConfig()
+				}
+				daemon.ID = console_config.DaemonID
 				next_args := args[1:]
 				for i, arg := range args[1:]  {
 					switch arg {

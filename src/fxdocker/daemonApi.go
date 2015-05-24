@@ -6,6 +6,7 @@ import (
 	"log"
 	"sync"
 	"strings"
+	"lib"
 )
 
 type FxDaemonApi struct {
@@ -81,17 +82,8 @@ func (fx_api *FxDaemonApi) ChildServers(w rest.ResponseWriter, r *rest.Request){
 	}
 }
 
-type TransferContainerCall struct {
-	Name 		string          `json:"name"`
-	Cmd 		string 			`json:"cmd"`
-	ImageName 	string			`json:"image_name"`
-	ImageId 	string          `json:"image_id"`
-	NeedToRun	bool        	`json:"need_to_run"`
-	Authorization string 		`json:"authorization"`
-}
-
 func (fx_api *FxDaemonApi) TransferContainer(w rest.ResponseWriter, r *rest.Request){
-	transfer := TransferContainerCall{}
+	transfer := lib.TransferContainerCall{}
 	err := r.DecodeJsonPayload(&transfer)
 	if err != nil {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
