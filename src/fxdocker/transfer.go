@@ -13,6 +13,7 @@ import (
 	"github.com/cheggaaa/pb"
 	"io"
 	"lib"
+	"time"
 )
 
 var (
@@ -94,6 +95,7 @@ func TransferContainer(container_id, repo_name, dest_host string, transfer_and_r
 		ImageId: container.Image,
 		NeedToRun: transfer_and_run,
 		Authorization: authorization,
+		Destination: dest_host,
 	}
 	transfer_json_buf, convert_error := json.Marshal(transfer_img)
 	json_length := bytes.Index(transfer_json_buf, []byte{0}) // For converting to string
@@ -157,30 +159,37 @@ func TransferContainer(container_id, repo_name, dest_host string, transfer_and_r
 	}
 
 	resp.Body.Close()
-	fmt.Println(body)
-	fmt.Println("Sending Image Info to ", dest_host, " Destination host")
-
-	// Making request with Image info to Destination host
-	body2 := &bytes.Buffer{}
-	body_bytes, marshal_error := json.Marshal(transfer_img)
-	if marshal_error != nil {
-		log.Fatal(marshal_error)
+	var resp_obj lib.TransferResponse
+	convert_error = json.Unmarshal(resp_body.Bytes(), &resp_obj)
+	if convert_error != nil {
+		fmt.Println("Unable to convert response to JSON", convert_error.Error())
+		fmt.Println(resp_body.String())
 		os.Exit(1)
 	}
 
-	body2.Write(body_bytes)
-	request, err2 = http.NewRequest("POST", fmt.Sprintf("http://%s/transfer/container", dest_host), body2)
-	if err2 != nil {
-		log.Fatal(err2)
-	}
-	request.Header.Set("Content-Type", "application/json")
-	resp, err3 = http_client.Do(request)
-	if err3 != nil {
-		log.Fatal(err3)
-		os.Exit(1)
+	if resp_obj.Error {
+		fmt.Println("Error response from server:", resp_obj.Message)
 	}
 
-	fmt.Println("Container with Image sent successfully !")
-	fmt.Println("Exiting !")
-	os.Exit(1)
+	fmt.Println("Waiting task to be done")
+	send_buf := []byte(fmt.Sprintf(`{"task_id": "%s"}`, resp_obj.TaskId))
+	task_res := lib.TransferResponse{}
+
+	for {
+		err = lib.PostJson(fmt.Sprintf("%s/task/result", FlaxtonContainerRepo), send_buf, &task_res, authorization)
+		if err != nil {
+			fmt.Println("Error sending check request: ", err.Error())
+		} else {
+			if task_res.Error {
+				fmt.Println("Task Returned with error: ", task_res.Message)
+				os.Exit(1)
+			}
+			if task_res.Done {
+				fmt.Println("Task Done successfully: ", task_res.Message)
+				os.Exit(1)
+			}
+		}
+		fmt.Print(".")
+		time.Sleep(time.Second * 2)
+	}
 }

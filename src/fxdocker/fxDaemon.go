@@ -113,17 +113,17 @@ func (fxd *FxDaemon) Run() {
 
 	go fxd.containerInspector()
 
-	ipRouting := ipTablesController.InitRouting("tcp", fxd.BalancerPort, fxd.ipTablesCallback)
-	go ipRouting.StartRouting()
-
 	if !fxd.Offline {
 		go fxd.ParentNotifier()
 		go fxd.RunTasks()
 	}
 
 	// Start API server
-	daemon_api := FxDaemonApi{Fxd: fxd}
-	daemon_api.RunApiServer()
+//	daemon_api := FxDaemonApi{Fxd: fxd}
+//	daemon_api.RunApiServer()
+
+	ipRouting := ipTablesController.InitRouting("tcp", fxd.BalancerPort, fxd.ipTablesCallback)
+	ipRouting.StartRouting()
 }
 
 type DaemonNotify struct {
