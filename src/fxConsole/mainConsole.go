@@ -40,6 +40,20 @@ func RunArguments(args []string) {
 				next_args := args[1:]
 				for i, arg := range args[1:]  {
 					switch arg {
+						case "list":  // Get list of all daemons for current user
+							{
+								var list_resp []fxdocker.DaemonListResponse
+								request_error := lib.PostJson(fmt.Sprintf("%s/daemon/list", fxdocker.FlaxtonContainerRepo), []byte("{}"), &list_resp, console_config.Authorization)
+								if request_error != nil {
+									fmt.Println("Response Error: ", request_error.Error())
+									os.Exit(1)
+								}
+								fmt.Println("List of Daemons")
+								for _, d := range list_resp {
+									fmt.Println(d.DaemonID, "     ", d.Name, d.IP, d.BalancerPort, d.CreatedTime)
+								}
+								os.Exit(1)
+							}
 						case "-host":
 							{
 								daemon.ListenHost = next_args[i+1]
@@ -55,7 +69,9 @@ func RunArguments(args []string) {
 						case "help", "-h", "-help":
 							{
 								fmt.Println("This command is for Starting Flaxton daemon load balancer and daemon API server")
-								fmt.Println("Formant: flaxton daemon <OPTIONS>")
+								fmt.Println("Formant: flaxton daemon [COMMAND] <OPTIONS>")
+								fmt.Println("COMMAND:")
+								fmt.Println("list  : List of daemon servers for current logged in user")
 								fmt.Println("OPTIONS:")
 								fmt.Println("-host  : Listenning address for daemon server, example: 127.0.0.1:8888")
 								fmt.Println("-balancer-port  : Network port for load balancing trafic across docker containers and child servers")

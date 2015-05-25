@@ -11,12 +11,21 @@ import (
 	"log"
 	"errors"
 	"lib"
+	"os"
 )
 
-const (
+var (
 	DockerEndpoint = "unix:///var/run/docker.sock"
-	FlaxtonContainerRepo = "http://container.flaxton.io"
+	FlaxtonContainerRepo = getFlaxtonRepo()
 )
+
+func getFlaxtonRepo() string {
+	ret_val := "http://container.flaxton.io"
+	if len(os.Getenv("FLAXTON_REPO")) > 0 {
+		ret_val = os.Getenv("FLAXTON_REPO")
+	}
+	return ret_val
+}
 
 type ContainerInspect struct {
 	ID string 							`json:"id"`  // container ID
@@ -50,6 +59,15 @@ type FxDaemon struct  {
 	Offline bool // if this parameter is true then Daemon will be running without flaxton.io communication
 	OnError ErrorHandler
 }
+
+type DaemonListResponse struct {
+	DaemonID string `json:"daemon_id"`
+	Name string `json:"name"`
+	IP string `json:"ip"`
+	BalancerPort int `json:"balancer_port"`
+	CreatedTime int64 `json:"created"` // Timestamp
+	ChildServers []ChildServer `json:"child_servers"`
+ }
 
 type DaemonRegisterCall struct {
 	DaemonID 		string 		`json:"daemon_id"`
