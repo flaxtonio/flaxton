@@ -15,7 +15,7 @@ import (
 
 const (
 	DockerEndpoint = "unix:///var/run/docker.sock"
-	FlaxtonContainerRepo = "http://127.0.0.1:8080"
+	FlaxtonContainerRepo = "http://container.flaxton.io"
 )
 
 type ContainerInspect struct {
