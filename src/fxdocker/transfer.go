@@ -98,8 +98,6 @@ func TransferContainer(container_id, repo_name, dest_host string, transfer_and_r
 		Destination: dest_host,
 	}
 	transfer_json_buf, convert_error := json.Marshal(transfer_img)
-	json_length := bytes.Index(transfer_json_buf, []byte{0}) // For converting to string
-
 	if convert_error != nil {
 		fmt.Println("Error converting TransferContainerCall structure to json: ", convert_error.Error())
 		os.Exit(1)
@@ -121,7 +119,7 @@ func TransferContainer(container_id, repo_name, dest_host string, transfer_and_r
 	}
 
 	fmt.Println("Container Exported Successfully")
-	writer.WriteField("image_info", string(transfer_json_buf[:json_length]))
+	writer.WriteField("image_info", string(transfer_json_buf[:]))
 	err = writer.Close()
 	if err != nil {
 		fmt.Println(err.Error())
@@ -176,7 +174,7 @@ func TransferContainer(container_id, repo_name, dest_host string, transfer_and_r
 	task_res := lib.TransferResponse{}
 
 	for {
-		err = lib.PostJson(fmt.Sprintf("%s/task/result", FlaxtonContainerRepo), send_buf, &task_res, authorization)
+		err = lib.PostJson(fmt.Sprintf("%s/task", FlaxtonContainerRepo), send_buf, &task_res, authorization)
 		if err != nil {
 			fmt.Println("Error sending check request: ", err.Error())
 		} else {

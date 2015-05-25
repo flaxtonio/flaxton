@@ -15,7 +15,7 @@ import (
 
 const (
 	DockerEndpoint = "unix:///var/run/docker.sock"
-	FlaxtonContainerRepo = "http://container.flaxton.io"
+	FlaxtonContainerRepo = "http://127.0.0.1:8080"
 )
 
 type ContainerInspect struct {
@@ -49,6 +49,12 @@ type FxDaemon struct  {
 	DockerEndpoint string // Docker daemon socket endpoint
 	Offline bool // if this parameter is true then Daemon will be running without flaxton.io communication
 	OnError ErrorHandler
+}
+
+type DaemonRegisterCall struct {
+	DaemonID 		string 		`json:"daemon_id"`
+	BalancerPort 	int 		`json:"balancer_port"`
+	IP 				string 		`json:"ip"`
 }
 
 func NewDaemon(docker_endpoint string, offline bool) (fxd FxDaemon) {
@@ -142,11 +148,16 @@ func (fxd *FxDaemon) ParentNotifier() {
 	)
 
 	for {
-		send_buf, marshal_error = json.Marshal(containers)
-		if marshal_error != nil {
-			fxd.OnError(marshal_error)
-			return
+		if len(containers) == 0 {
+			send_buf = []byte("{}")  // empty array as json
+		} else {
+			send_buf, marshal_error = json.Marshal(containers)
+			if marshal_error != nil {
+				fxd.OnError(marshal_error)
+				return
+			}
 		}
+
 		request_error = lib.PostJson(fmt.Sprintf("%s/notify", FlaxtonContainerRepo), send_buf, &notify, fmt.Sprintf("%s|%s", fxd.AuthKey, fxd.ID))
 		if request_error != nil {
 			lib.LogError("Error from Parent Notifier request service", request_error)
@@ -155,8 +166,9 @@ func (fxd *FxDaemon) ParentNotifier() {
 			fxd.child_servers = make([]ChildServer, 0)
 			fxd.child_servers = append(fxd.child_servers, notify.ChildServers...)
 			// Reloading Task list ... Server should send task list once
-			fxd.pendingTasks = make([]lib.Task, 0)
-			fxd.pendingTasks = append(fxd.pendingTasks, notify.Tasks...)
+			if len(notify.Tasks) > 0 {
+				fxd.pendingTasks = append(fxd.pendingTasks, notify.Tasks...)
+			}
 		}
 
 		time.Sleep(time.Second * 1)
@@ -177,25 +189,33 @@ func (fxd *FxDaemon) RunTasks() {
 			current_tasks = make([]lib.Task, 0)
 			current_tasks = append(current_tasks, fxd.pendingTasks...)
 			fxd.pendingTasks = make([]lib.Task, 0)  // Clearing tasks
-
+			fmt.Println("Task: Got new ", len(current_tasks), "tasks")
 			// Starting execution for current tasks
 			// TODO: maybe we will need concurrent execution in future
 			for _, t := range current_tasks {
+				fmt.Println("Task: ", t.TaskID, t.Type)
 				switch t.Type {
 					case lib.TaskContainerTransfer:
 						{
 							current_result = lib.TaskResult{
 								TaskID:t.TaskID,
-								StartTime:time.Now().UTC(),
+								StartTime:time.Now().UTC().Unix(),
 								Error: false,
 								Message: "",
 							}
-							_, err := fxd.TransferContainer(t.Data.(lib.TransferContainerCall))
+							cont_call := lib.TransferContainerCall{}
+							err := t.ConvertData(&cont_call)
 							if err != nil {
 								current_result.Error = true
 								current_result.Message = err.Error()
 							}
-							current_result.EndTime = time.Now().UTC()
+
+							_, err = fxd.TransferContainer(cont_call)
+							if err != nil {
+								current_result.Error = true
+								current_result.Message = err.Error()
+							}
+							current_result.EndTime = time.Now().UTC().Unix()
 						}
 					default:
 						{
@@ -213,9 +233,10 @@ func (fxd *FxDaemon) RunTasks() {
 						request_error = lib.PostJson(fmt.Sprintf("%s/task", FlaxtonContainerRepo), send_buf, nil, fmt.Sprintf("%s|%s", fxd.AuthKey, fxd.ID))
 						if request_error != nil {
 							log.Fatal(request_error)
+						} else {
+							fmt.Println("Task: Done ", t.TaskID, current_result.EndTime)
 						}
 					}
-
 				}
 			}
 		}

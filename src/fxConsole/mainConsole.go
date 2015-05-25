@@ -10,6 +10,7 @@ import (
 	"github.com/Sirupsen/logrus"
 	"encoding/hex"
 	"lib"
+	"encoding/json"
 )
 
 var (
@@ -35,7 +36,7 @@ func RunArguments(args []string) {
 					fmt.Println(console_config.DaemonID)
 					console_config.SaveConfig()
 				}
-				daemon.ID = console_config.DaemonID
+				daemon.AuthKey = console_config.Authorization
 				next_args := args[1:]
 				for i, arg := range args[1:]  {
 					switch arg {
@@ -63,6 +64,16 @@ func RunArguments(args []string) {
 							}
 					}
 				}
+
+				daemon.ID = console_config.DaemonID
+				daemon_call := fxdocker.DaemonRegisterCall{DaemonID:daemon.ID, BalancerPort:daemon.BalancerPort, IP:daemon.ListenHost}
+				d_call, _ := json.Marshal(daemon_call)
+				request_error := lib.PostJson(fmt.Sprintf("%s/daemon", fxdocker.FlaxtonContainerRepo), d_call, nil, fmt.Sprintf("%s|%s", console_config.Authorization, daemon.ID))
+				if request_error != nil {
+					fmt.Println("Unable to register daemon: ", request_error.Error())
+					os.Exit(1)
+				}
+
 				fmt.Println("Starting Flaxton Daemon on Address: ", daemon.ListenHost)
 				daemon.Run()
 			}

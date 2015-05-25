@@ -1,7 +1,7 @@
 package lib
 
 import (
-	"time"
+	"encoding/json"
 )
 
 type TransferContainerCall struct {
@@ -33,13 +33,25 @@ type Task struct  {
 	Type TaskType  		`json:"type"`
 	Data interface{} 	`json:"data"`
 	Cron bool 			`json:"cron"`
-	StartTime time.Time `json:"start_time"`
-	EndTime time.Time 	`json:"end_time"`
+	StartTime int64 	`json:"start_time,omitempty"`
+	EndTime int64 		`json:"end_time,omitempty"`
 }
 type TaskResult struct  {
 	TaskID string       `json:"task_id"`
-	StartTime time.Time `json:"start_time"`
-	EndTime time.Time 	`json:"end_time"`
+	StartTime int64 	`json:"start_time,omitempty"`
+	EndTime int64 		`json:"end_time,omitempty"`
 	Error bool          `json:"error"`
 	Message string      `json:"message"`
+}
+
+func (t *Task) ConvertData(obj interface{}) error {
+	b, err := json.Marshal(t.Data)
+	if err != nil {
+		return err
+	}
+	err = json.Unmarshal(b, obj)
+	if err != nil {
+		return err
+	}
+	return nil
 }
