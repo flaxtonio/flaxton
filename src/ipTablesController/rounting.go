@@ -68,13 +68,13 @@ func (ip *IpTableRouting) StartRouting() {
 	// Starting IP tables forward routing
 	for {
 		for _, ip_addr = range server_ips  {
-			tablesCMD.ForwardIp(ip.RoutingPortStr, ip_addr, ip.RoutingProtocol)
-			time.Sleep(time.Millisecond * 150)
 			if prev_ip != "" {
 				tablesCMD.ClearForwardIp(ip.RoutingPortStr, prev_ip, ip.RoutingProtocol)
 			}
+			time.Sleep(time.Millisecond * 100)
+			tablesCMD.ForwardIp(ip.RoutingPortStr, ip_addr, ip.RoutingProtocol)
 			prev_ip = ip_addr
-			time.Sleep(time.Millisecond * 150)
+			time.Sleep(time.Millisecond * 100)
 		}
 		time.Sleep(time.Millisecond * 100)
 	}
