@@ -107,7 +107,7 @@ func (fxd *FxDaemon) containerInspector() {
 			containers = make([]ContainerInspect, 0)
 			for _, con := range dock_containers  {
 				dock_inspect, _ = dockerClient.InspectContainer(con.ID)
-				dock_top, _ = dockerClient.TopContainer(con.ID, "")
+				dock_top, _ = dockerClient.TopContainer(con.ID, "aux")
 				containers = append(containers, ContainerInspect{
 					ID:con.ID,
 					APIContainer: con,
@@ -163,13 +163,15 @@ func (fxd *FxDaemon) ParentNotifier() {
 		marshal_error error
 		request_error error
 		notify DaemonNotify
+		cont_map = make(map[string][]ContainerInspect, 1)
 	)
 
 	for {
 		if len(containers) == 0 {
 			send_buf = []byte("{}")  // empty array as json
 		} else {
-			send_buf, marshal_error = json.Marshal(containers)
+			cont_map["containers"] = containers
+			send_buf, marshal_error = json.Marshal(cont_map)
 			if marshal_error != nil {
 				fxd.OnError(marshal_error)
 				return

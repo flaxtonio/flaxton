@@ -71,11 +71,11 @@ func (ip *IpTableRouting) StartRouting() {
 			if prev_ip != "" {
 				tablesCMD.ClearForwardIp(ip.RoutingPortStr, prev_ip, ip.RoutingProtocol)
 			}
-			time.Sleep(time.Millisecond * 100)
+			time.Sleep(time.Millisecond * 300)
 			tablesCMD.ForwardIp(ip.RoutingPortStr, ip_addr, ip.RoutingProtocol)
 			prev_ip = ip_addr
-			time.Sleep(time.Millisecond * 100)
+			time.Sleep(time.Millisecond * 300)
 		}
-		time.Sleep(time.Millisecond * 100)
+		time.Sleep(time.Millisecond * 500)
 	}
 }
