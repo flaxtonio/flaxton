@@ -48,7 +48,6 @@ type ChildServer struct {
 
 type FxDaemon struct  {
 	ID string				// Random generated string for identification specific Daemon
-	ListenHost string 		// IP and port server to listen container requests EX. 0.0.0.0:8888
 	Authentication bool 	// Authentication enabled or not
 	AuthKey	string			// Username for authentication
 	ParentHost string 	// Parent Balancer IP port EX. 192.168.1.10:8888

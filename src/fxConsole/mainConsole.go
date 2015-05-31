@@ -54,10 +54,6 @@ func RunArguments(args []string) {
 								}
 								os.Exit(1)
 							}
-						case "-host":
-							{
-								daemon.ListenHost = next_args[i+1]
-							}
 						case "-balancer-port":
 							{
 								daemon.BalancerPort, _ = strconv.Atoi(next_args[i+1])
@@ -73,7 +69,6 @@ func RunArguments(args []string) {
 								fmt.Println("COMMAND:")
 								fmt.Println("list  : List of daemon servers for current logged in user")
 								fmt.Println("OPTIONS:")
-								fmt.Println("-host  : Listenning address for daemon server, example: 127.0.0.1:8888")
 								fmt.Println("-balancer-port  : Network port for load balancing trafic across docker containers and child servers")
 								fmt.Println("-offline  : If this parameter exists, then daemon will be working without flaxton.io server")
 								os.Exit(1)
@@ -82,7 +77,7 @@ func RunArguments(args []string) {
 				}
 
 				daemon.ID = console_config.DaemonID
-				daemon_call := fxdocker.DaemonRegisterCall{DaemonID:daemon.ID, BalancerPort:daemon.BalancerPort, IP:daemon.ListenHost}
+				daemon_call := fxdocker.DaemonRegisterCall{DaemonID:daemon.ID, BalancerPort:daemon.BalancerPort}
 				d_call, _ := json.Marshal(daemon_call)
 				request_error := lib.PostJson(fmt.Sprintf("%s/daemon", fxdocker.FlaxtonContainerRepo), d_call, nil, fmt.Sprintf("%s|%s", console_config.Authorization, daemon.ID))
 				if request_error != nil {
@@ -90,7 +85,7 @@ func RunArguments(args []string) {
 					os.Exit(1)
 				}
 
-				fmt.Println("Starting Flaxton Daemon on Address: ", daemon.ListenHost)
+				fmt.Println("Starting Flaxton Daemon ! It will balance", daemon.BalancerPort, "port")
 				daemon.Run()
 			}
 
@@ -119,7 +114,7 @@ func RunArguments(args []string) {
 							{
 								repo_name = next_args[i+1]
 							}
-						case "-host": // Destination Host
+						case "-daemon": // Destination Host
 							{
 								destination = next_args[i+1]
 							}
@@ -136,7 +131,7 @@ func RunArguments(args []string) {
 								fmt.Println("OPTIONS:")
 								fmt.Println("-c  : Option for specifiing container ID to transfer, could be also running container")
 								fmt.Println("-repo  : Option for specifiing Image repository name for resporing it in destination after transfer")
-								fmt.Println("-host  : Destionation host address, example: 192.168.1.5:8888")
+								fmt.Println("-daemon  : Destionation Daemon Name or ID")
 								fmt.Println("-run  : Turn on container after transfering or not, availbale options [Yes/No], [y/n], default is No")
 								os.Exit(1)
 							}
