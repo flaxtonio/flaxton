@@ -24,6 +24,9 @@ type TransferResponse struct {
 // TaskStack types
 const (
 	TaskContainerTransfer = "container_transfer"
+	TaskSetDaemonName = "set_daemon_name"
+	TaskAddChildServer = "add_child_server"
+	TaskAddBalancingImage = "add_balancing_image"
 )
 
 type TaskType string

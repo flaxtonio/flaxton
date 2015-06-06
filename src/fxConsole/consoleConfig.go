@@ -5,12 +5,14 @@ import (
 	"os"
 	"fmt"
 	"io/ioutil"
+	"fxdocker"
 )
 
 type ConsoleConfig struct {
-	Username string			`json:"username"`
-	Authorization string 	`json:"authorization"`
-	DaemonID string 		`json:"daemon_id"`
+	Username 		string						`json:"username"`
+	Authorization 	string 						`json:"authorization"`
+	DaemonID 		string 						`json:"daemon_id"`
+	Balancer 		fxdocker.BalancerImageInfo  `json:"balancer"`
 }
 
 func (conf *ConsoleConfig) SaveConfig() {

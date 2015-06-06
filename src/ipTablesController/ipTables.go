@@ -18,9 +18,10 @@ iptables -t nat -A POSTROUTING -j MASQUERADE
 */
 
 import (
-	"net"
-	"os"
 	"os/exec"
+	"bytes"
+	"fmt"
+	"os"
 )
 
 const (
@@ -112,22 +113,40 @@ func (ip *IpTables) ClearDenyRole(local_port, remote_adr, protocol string) error
 	return err
 }
 
-func (ip *IpTables) ReCalculateRoles() {
+type TableRule struct  {
+	LocalPort string
+	RemoteAddr string
+	Protocol string
 }
 
-func PrivateIP() string {
-	addrs, err := net.InterfaceAddrs()
-	if err != nil {
-		os.Stderr.WriteString("Oops: " + err.Error() + "\n")
-		os.Exit(1)
-	}
 
-	for _, a := range addrs {
-		if ipnet, ok := a.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
-			if ipnet.IP.To4() != nil {
-				return ipnet.IP.String()
-			}
-		}
+var restore_rule = "-A PREROUTING -p %s -m tcp --dport %s -j DNAT --to-destination %s"
+
+// Table rule by balancing ports, every time they will change their accessable rule
+func (ip *IpTables) RecalculateDNATRole() {
+	if len(AvailableRoutings) == 0 {
+		return
 	}
-	return ""
+	buffer := bytes.NewBufferString("*nat\n")
+	cmd := exec.Command("iptables-restore", "--table=nat")
+	for _, r := range AvailableRoutings  {
+		buffer.WriteString(fmt.Sprintf(restore_rule, r.Rule.Protocol, r.Rule.LocalPort, r.Rule.RemoteAddr))
+		buffer.WriteString("\n")
+	}
+	buffer.WriteString("COMMIT\n")
+	cmd.Stdin = buffer
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Start()
+}
+
+var clear_rules_string = `
+*nat
+COMMIT
+`
+
+func (ip *IpTables) ClearDNATRole() {
+	cmd := exec.Command("iptables-restore", "--table=nat")
+	cmd.Stdin = bytes.NewBufferString(clear_rules_string)
+	cmd.Run()
 }

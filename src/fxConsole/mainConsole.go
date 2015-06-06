@@ -10,7 +10,6 @@ import (
 	"github.com/Sirupsen/logrus"
 	"encoding/hex"
 	"lib"
-	"encoding/json"
 )
 
 var (
@@ -37,12 +36,13 @@ func RunArguments(args []string) {
 					console_config.SaveConfig()
 				}
 				daemon.AuthKey = console_config.Authorization
+				daemon.ID = console_config.DaemonID
 				next_args := args[1:]
 				for i, arg := range args[1:]  {
 					switch arg {
 						case "list":  // Get list of all daemons for current user
 							{
-								var list_resp []fxdocker.DaemonListResponse
+								var list_resp []fxdocker.FxDaemon
 								request_error := lib.PostJson(fmt.Sprintf("%s/daemon/list", fxdocker.FlaxtonContainerRepo), []byte("{}"), &list_resp, console_config.Authorization)
 								if request_error != nil {
 									fmt.Println("Response Error: ", request_error.Error())
@@ -50,17 +50,48 @@ func RunArguments(args []string) {
 								}
 								fmt.Println("List of Daemons")
 								for _, d := range list_resp {
-									fmt.Println(d.DaemonID, "     ", d.Name, d.IP, d.BalancerPort, d.CreatedTime)
+									fmt.Println(d.ID, "     ", d.Name)
 								}
 								os.Exit(1)
 							}
-						case "-balancer-port":
+						case "-balancer":
 							{
-								daemon.BalancerPort, _ = strconv.Atoi(next_args[i+1])
+								local_port, _ := strconv.Atoi(next_args[i+1])
+								image_port, _ := strconv.Atoi(next_args[i+3])
+								daemon.BalancerPortImages[local_port] = make([]fxdocker.BalancerImageInfo, 0)
+								daemon.BalancerPortImages[local_port] = append(daemon.BalancerPortImages[local_port], fxdocker.BalancerImageInfo{
+									ImageName: next_args[i+2],
+									ImagePort: image_port,
+									Port: local_port,
+								})
+							}
+						case "-child":
+							{
+								local_port, _ := strconv.Atoi(next_args[i+1])
+								child_port, _ := strconv.Atoi(next_args[i+3])
+								daemon.BalancerPortChild[local_port] = make([]fxdocker.ChildServer, 0)
+								daemon.BalancerPortChild[local_port] = append(daemon.BalancerPortChild[local_port], fxdocker.ChildServer{
+									IP: next_args[i+2],
+									Port: child_port,
+								})
 							}
 						case "-offline":
 							{
 								daemon.Offline = true
+							}
+						case "set_name":
+							{
+								daemon_name := next_args[i+1]
+								name := next_args[i+2]
+								sdn_map := make(map[string]string)
+								sdn_map["name"] = name
+								task_err := daemon.AddTask(lib.TaskSetDaemonName, daemon_name, sdn_map)
+								if task_err != nil {
+									fmt.Println(task_err)
+								} else {
+									fmt.Println("Task Sent !")
+								}
+								os.Exit(1)
 							}
 						case "help", "-h", "-help":
 							{
@@ -69,23 +100,21 @@ func RunArguments(args []string) {
 								fmt.Println("COMMAND:")
 								fmt.Println("list  : List of daemon servers for current logged in user")
 								fmt.Println("OPTIONS:")
-								fmt.Println("-balancer-port  : Network port for load balancing trafic across docker containers and child servers")
+								fmt.Println("-balancer  : Options should be followed by this direction - local_port image_name image_port")
+								fmt.Println("-child  : Add chaild server with this combination: [balancing port] [ip address]")
 								fmt.Println("-offline  : If this parameter exists, then daemon will be working without flaxton.io server")
 								os.Exit(1)
 							}
 					}
 				}
 
-				daemon.ID = console_config.DaemonID
-				daemon_call := fxdocker.DaemonRegisterCall{DaemonID:daemon.ID, BalancerPort:daemon.BalancerPort}
-				d_call, _ := json.Marshal(daemon_call)
-				request_error := lib.PostJson(fmt.Sprintf("%s/daemon", fxdocker.FlaxtonContainerRepo), d_call, nil, fmt.Sprintf("%s|%s", console_config.Authorization, daemon.ID))
+				request_error := daemon.Register()
 				if request_error != nil {
 					fmt.Println("Unable to register daemon: ", request_error.Error())
 					os.Exit(1)
 				}
 
-				fmt.Println("Starting Flaxton Daemon ! It will balance", daemon.BalancerPort, "port")
+				fmt.Println("Starting Flaxton Daemon ! It will balance", daemon.ID, "port")
 				daemon.Run()
 			}
 
@@ -176,6 +205,5 @@ func RunArguments(args []string) {
 				console_config.SaveConfig()
 				fmt.Println("Login Successful !")
 			}
-
 	}
 }
