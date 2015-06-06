@@ -79,6 +79,19 @@ func RunArguments(args []string) {
 							{
 								daemon.Offline = true
 							}
+						case "pause-container":
+							{
+								daemon_name := next_args[i+1]
+								sdn_map := make([]string, 1)
+								sdn_map[0] = next_args[i+2]
+								task_err := daemon.AddTask(lib.TaskPauseContainer, daemon_name, sdn_map)
+								if task_err != nil {
+									fmt.Println(task_err)
+								} else {
+									fmt.Println("Task Sent !")
+								}
+								os.Exit(1)
+							}
 						case "set_name":
 							{
 								daemon_name := next_args[i+1]

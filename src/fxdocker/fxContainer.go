@@ -24,7 +24,10 @@ var (
 
 func getContainerInfo(con docker.APIContainers) ContainerInspect {
 	dock_inspect, _ := dockerClient.InspectContainer(con.ID)
-	dock_top, _ := dockerClient.TopContainer(con.ID, "aux")
+	var dock_top docker.TopResult
+	if dock_inspect.State.Running {
+		dock_top, _ = dockerClient.TopContainer(con.ID, "aux")
+	}
 
 	return ContainerInspect{
 		ID:con.ID,
@@ -72,4 +75,25 @@ func (fxd *FxDaemon) StartContainerInspector() {
 		}
 		time.Sleep(time.Second * 1)
 	}
+}
+
+type ContainerControl struct {
+}
+
+func CreateContainer(ops docker.CreateContainerOptions) error {
+	// TODO: Check image exits or not before creating container
+	_, err := dockerClient.CreateContainer(ops)
+	return err
+}
+
+func StartContainer(container_id string, host_config *docker.HostConfig) error {
+	return dockerClient.StartContainer(container_id, host_config)
+}
+
+func StopContainer(container_id string, timeout uint) error {
+	return dockerClient.StopContainer(container_id, timeout)
+}
+
+func PauseContainer(container_id string) error {
+	return dockerClient.PauseContainer(container_id)
 }

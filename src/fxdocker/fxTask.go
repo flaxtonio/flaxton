@@ -10,6 +10,7 @@ import (
 	"errors"
 	"time"
 	"encoding/json"
+	"strconv"
 )
 
 func (fxd *FxDaemon) RunTasks() {
@@ -45,14 +46,15 @@ func (fxd *FxDaemon) RunTasks() {
 						if err != nil {
 							current_result.Error = true
 							current_result.Message = err.Error()
+						} else {
+							_, err = fxd.TransferContainer(cont_call)
+							if err != nil {
+								current_result.Error = true
+								current_result.Message = err.Error()
+							} else {
+								current_result.EndTime = time.Now().UTC().Unix()
+							}
 						}
-
-						_, err = fxd.TransferContainer(cont_call)
-						if err != nil {
-							current_result.Error = true
-							current_result.Message = err.Error()
-						}
-						current_result.EndTime = time.Now().UTC().Unix()
 					}
 				case lib.TaskSetDaemonName:
 					{
@@ -61,9 +63,165 @@ func (fxd *FxDaemon) RunTasks() {
 						if err != nil {
 							current_result.Error = true
 							current_result.Message = err.Error()
+						} else {
+							fxd.Name = name_map["name"]
+							fxd.Register()
+							current_result.EndTime = time.Now().UTC().Unix()
 						}
-						fxd.Name = name_map["name"]
-						fxd.Register()
+					}
+				case lib.TaskAddChildServer:
+					{
+						child_map := make(map[string]ChildServer)
+						err := t.ConvertData(&child_map)
+						if err != nil {
+							current_result.Error = true
+							current_result.Message = err.Error()
+						} else {
+							var port int
+							for k, ch :=range child_map {
+								port, _ = strconv.Atoi(k)
+								if _, ok := fxd.BalancerPortChild[port]; !ok {
+									fxd.BalancerPortChild[port] = make([]ChildServer, 0)
+								}
+								fxd.BalancerPortChild[port] = append(fxd.BalancerPortChild[port], ch)
+								current_result.EndTime = time.Now().UTC().Unix()
+							}
+						}
+					}
+				case lib.TaskAddBalancingImage:
+					{
+						im_map := make(map[string]BalancerImageInfo)
+						err := t.ConvertData(&im_map)
+						if err != nil {
+							current_result.Error = true
+							current_result.Message = err.Error()
+						} else {
+							var port int
+							for k, im :=range im_map {
+								port, _ = strconv.Atoi(k)
+								if _, ok := fxd.BalancerPortImages[port]; !ok {
+									fxd.BalancerPortImages[port] = make([]BalancerImageInfo, 0)
+								}
+								fxd.BalancerPortImages[port] = append(fxd.BalancerPortImages[port], im)
+							}
+							current_result.EndTime = time.Now().UTC().Unix()
+						}
+					}
+				case lib.TaskStartBalancerPort:
+					{
+						im_map := make(map[string]int)
+						err := t.ConvertData(&im_map)
+						if err != nil {
+							current_result.Error = true
+							current_result.Message = err.Error()
+						} else {
+							fxd.StartBalancerPort(im_map["port"])
+							current_result.EndTime = time.Now().UTC().Unix()
+						}
+					}
+				case lib.TaskStopBalancerPort:
+					{
+						im_map := make(map[string]int)
+						err := t.ConvertData(&im_map)
+						if err != nil {
+							current_result.Error = true
+							current_result.Message = err.Error()
+						} else {
+							fxd.StopBalancerPort(im_map["port"])
+							current_result.EndTime = time.Now().UTC().Unix()
+						}
+					}
+				case lib.TaskStartContainer:
+					{
+						im_map := make(map[string]docker.HostConfig) // ContainerID -> Container Host Config
+						err := t.ConvertData(&im_map)
+						if err != nil {
+							current_result.Error = true
+							current_result.Message = err.Error()
+						} else {
+							message := ""
+							for cid, conf :=range im_map {
+								err = StartContainer(cid, &conf)
+								if err != nil {
+									message = fmt.Sprintf("%s|%s&", cid, err.Error(), message)
+								}
+							}
+							if message != "" {
+								current_result.Error = true
+								current_result.Message = message
+							} else {
+								current_result.EndTime = time.Now().UTC().Unix()
+							}
+						}
+					}
+				case lib.TaskStopContainer:
+					{
+						im_map := make(map[string]uint) // ContainerID -> Stop Timeout
+						err := t.ConvertData(&im_map)
+						if err != nil {
+							current_result.Error = true
+							current_result.Message = err.Error()
+						} else {
+							message := ""
+							for cid, t :=range im_map {
+								err = StopContainer(cid, t)
+								if err != nil {
+									message = fmt.Sprintf("%s|%s&", cid, err.Error(), message)
+								}
+							}
+							if message != "" {
+								current_result.Error = true
+								current_result.Message = message
+							} else {
+								current_result.EndTime = time.Now().UTC().Unix()
+							}
+						}
+					}
+				case lib.TaskPauseContainer:
+					{
+						im_map := make([]string, 0) // ContainerID Array to pause
+						err := t.ConvertData(&im_map)
+						if err != nil {
+							current_result.Error = true
+							current_result.Message = err.Error()
+						} else {
+							message := ""
+							for _, cid :=range im_map {
+								err = PauseContainer(cid)
+								if err != nil {
+									message = fmt.Sprintf("%s|%s&", cid, err.Error(), message)
+								}
+							}
+							if message != "" {
+								current_result.Error = true
+								current_result.Message = message
+							} else {
+								current_result.EndTime = time.Now().UTC().Unix()
+							}
+						}
+					}
+				case lib.TaskCreateContainer:
+					{
+						im_map := make(map[string]docker.CreateContainerOptions) // ContainerName -> Creation Options
+						err := t.ConvertData(&im_map)
+						if err != nil {
+							current_result.Error = true
+							current_result.Message = err.Error()
+						} else {
+							message := ""
+							for cname, opts :=range im_map {
+								err = CreateContainer(opts)
+								if err != nil {
+									message = fmt.Sprintf("%s|%s&", cname, err.Error(), message)
+								}
+							}
+							if message != "" {
+								current_result.Error = true
+								current_result.Message = message
+							} else {
+								current_result.EndTime = time.Now().UTC().Unix()
+							}
+						}
 					}
 
 				default:

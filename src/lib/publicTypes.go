@@ -27,6 +27,12 @@ const (
 	TaskSetDaemonName = "set_daemon_name"
 	TaskAddChildServer = "add_child_server"
 	TaskAddBalancingImage = "add_balancing_image"
+	TaskStartBalancerPort = "start_balancing_port"
+	TaskStopBalancerPort = "stop_balancing_port"
+	TaskStartContainer = "start_container"
+	TaskStopContainer = "stop_container"
+	TaskPauseContainer = "pause_container"
+	TaskCreateContainer = "create_container"
 )
 
 type TaskType string
