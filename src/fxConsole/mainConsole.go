@@ -127,7 +127,7 @@ func RunArguments(args []string) {
 					os.Exit(1)
 				}
 
-				fmt.Println("Starting Flaxton Daemon ! It will balance", daemon.ID, "port")
+				fmt.Println("Starting Flaxton Daemon ", daemon.ID)
 				daemon.Run()
 			}
 
