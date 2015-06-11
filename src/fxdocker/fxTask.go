@@ -316,7 +316,11 @@ func (fxd *FxDaemon) TransferImage(container_cmd map[string]string) (err error) 
 		return
 	}
 
-	err = client.TagImage(fmt.Sprintf("%s:%s", reg_image, image_names[1]), docker.TagImageOptions{Repo:image_names[0], Tag:image_names[1]})
+	err = client.TagImage(fmt.Sprintf("%s:%s", reg_image, image_names[1]), docker.TagImageOptions{
+		Repo:image_names[0],
+		Tag:image_names[1],
+		Force: true,
+	})
 
 	if err != nil {
 		fmt.Println("Error Tagging image: ", image_names[0])
