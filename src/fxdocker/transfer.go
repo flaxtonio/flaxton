@@ -102,10 +102,10 @@ func TransferImage(image, daemon, run_cmd, run_count string, authorization strin
 	if err != nil {
 		fmt.Println("Error Pushing Image to Registery: ", DockerRegistry)
 		fmt.Println(err.Error())
-		client.RemoveImage(reg_image)
+		client.RemoveImage(fmt.Sprintf("%s:%s", reg_image, image_names[1]))
 		os.Exit(1)
 	}
-	err = client.RemoveImage(reg_image)
+	err = client.RemoveImage(fmt.Sprintf("%s:%s", reg_image, image_names[1]))
 	if err != nil {
 		fmt.Println("Error UnTagging : ", reg_image)
 		fmt.Println(err.Error())
