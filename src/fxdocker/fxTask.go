@@ -321,11 +321,11 @@ func (fxd *FxDaemon) TransferImage(container_cmd map[string]string) (err error) 
 	if err != nil {
 		fmt.Println("Error Tagging image: ", image_names[0])
 		fmt.Println(err.Error())
-		client.RemoveImage(reg_image)
+		client.RemoveImage(fmt.Sprintf("%s:%s", reg_image, image_names[1]))
 		return
 	}
 
-	err = client.RemoveImage(reg_image)
+	err = client.RemoveImage(fmt.Sprintf("%s:%s", reg_image, image_names[1]))
 
 	if err != nil {
 		fmt.Println("Error Rmoving image: ", reg_image)
