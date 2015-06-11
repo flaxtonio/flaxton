@@ -1,15 +1,16 @@
 package lib
 
 import (
-	"math/rand"
+	"os/exec"
+	"log"
+	"os"
 )
 
-var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
-
 func RandomString(n int) string {
-	b := make([]rune, n)
-	for i := range b {
-		b[i] = letters[rand.Intn(len(letters))]
+	out, err := exec.Command("uuidgen").Output()
+	if err != nil {
+		log.Fatal(err)
+		os.Exit(1)
 	}
-	return string(b)
+	return string(out)
 }
