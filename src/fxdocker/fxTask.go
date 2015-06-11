@@ -303,11 +303,17 @@ func (fxd *FxDaemon) TransferImage(container_cmd map[string]string) (err error) 
 	image_names = strings.Split(container_cmd["image"], ":")
 	reg_image = fmt.Sprintf("%s/%s", DockerRegistry, image_names[0])
 
-	client.PullImage(docker.PullImageOptions{
+	err = client.PullImage(docker.PullImageOptions{
 		Registry: reg_image,
 		Tag: image_names[1],
 		OutputStream:os.Stdout,
-	}, docker.AuthConfiguration{ServerAddress:DockerRegistry})
+	}, docker.AuthConfiguration{Username:"test",Password:"test",ServerAddress:DockerRegistry})
+
+	if err != nil {
+		fmt.Println("Error pulling image: ", reg_image)
+		fmt.Println(err.Error())
+		return
+	}
 
 	if len(container_cmd["run_cmd"]) > 0 {  // if container start command set then we need to create container and run it
 		var (
