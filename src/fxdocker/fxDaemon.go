@@ -24,7 +24,7 @@ func getFlaxtonRepo() string {
 }
 
 func getDockerRegistry() string {
-	ret_val := "container.flaxton.io:5000"
+	ret_val := "flaxton.io:5000"
 	if len(os.Getenv("FLAXTON_REGISTERY")) > 0 {
 		ret_val = os.Getenv("FLAXTON_REGISTERY")
 	}
