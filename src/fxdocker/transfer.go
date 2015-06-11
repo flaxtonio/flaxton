@@ -87,7 +87,7 @@ func TransferImage(image, daemon, run_cmd, run_count string, authorization strin
 	)
 	image_names = strings.Split(image, ":")
 	reg_image = fmt.Sprintf("%s/%s", DockerRegistry, image_names[0])
-	err = client.TagImage(image, docker.TagImageOptions{Repo:reg_image})
+	err = client.TagImage(image, docker.TagImageOptions{Repo:reg_image, Tag: image_names[1]})
 	if err != nil {
 		fmt.Println("Error Tagging Image: ", reg_image)
 		fmt.Println(err.Error())
