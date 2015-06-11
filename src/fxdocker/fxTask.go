@@ -306,7 +306,6 @@ func (fxd *FxDaemon) TransferImage(container_cmd map[string]string) (err error) 
 	err = client.PullImage(docker.PullImageOptions{
 		Repository: image_names[0],
 		Registry: DockerRegistry,
-		Tag: image_names[1],
 		OutputStream:os.Stdout,
 	}, docker.AuthConfiguration{Username:"test",Password:"test",ServerAddress:DockerRegistry})
 
