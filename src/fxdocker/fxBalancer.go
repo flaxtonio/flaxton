@@ -40,6 +40,7 @@ func (fxd *FxDaemon) StartBalancerPort(port int) {
 
 		for BalancerPortStack[port].Len() > 0 {
 			ipTablesController.ReplaceRouting(port, BalancerPortStack[port].Pop().(string))
+			ipTablesController.IpCommandChan <- 1
 			<- ipTablesController.IpCommandChan
 		}
 		push_chanel <- 1

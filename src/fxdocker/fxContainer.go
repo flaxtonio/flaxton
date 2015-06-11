@@ -23,9 +23,11 @@ var (
 
 
 func getContainerInfo(con docker.APIContainers) ContainerInspect {
+	time.Sleep(time.Millisecond * 100)
 	dock_inspect, _ := dockerClient.InspectContainer(con.ID)
 	var dock_top docker.TopResult
 	if dock_inspect.State.Running {
+		time.Sleep(time.Millisecond * 100)
 		dock_top, _ = dockerClient.TopContainer(con.ID, "aux")
 	}
 
@@ -57,6 +59,7 @@ func (fxd *FxDaemon) StartContainerInspector() {
 		} else {
 			for _, con := range dock_containers  {
 				AvailableContainers[con.ID] = getContainerInfo(con)
+				time.Sleep(time.Millisecond * 100)
 				im_name = fxd.getImageNameById(AvailableContainers[con.ID].InspectContainer.Image)
 				if len(im_name) > 0 {
 					cont_id_contains = false
@@ -70,10 +73,10 @@ func (fxd *FxDaemon) StartContainerInspector() {
 						ContainersPerImage[im_name] = append(ContainersPerImage[im_name], con.ID)
 					}
 				}
-				time.Sleep(time.Millisecond * 20)
+				time.Sleep(time.Millisecond * 100)
 			}
 		}
-		time.Sleep(time.Second * 1)
+		time.Sleep(time.Millisecond * 300)
 	}
 }
 

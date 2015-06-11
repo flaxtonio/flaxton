@@ -38,6 +38,7 @@ func (fxd *FxDaemon) StartImageInspector() {
 			im := AvailableImages[img.RepoTags[0]]
 			im.ID = img.ID
 			im.ApiImage = img
+			time.Sleep(time.Millisecond * 100)
 			im.Inspect, err = dockerClient.InspectImage(img.ID)
 			if err != nil {
 				fxd.OnError(err)

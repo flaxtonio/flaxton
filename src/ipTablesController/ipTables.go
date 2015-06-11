@@ -137,7 +137,7 @@ func (ip *IpTables) RecalculateDNATRole() {
 	cmd.Stdin = buffer
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	cmd.Start()
+	cmd.Run()
 }
 
 var clear_rules_string = `
