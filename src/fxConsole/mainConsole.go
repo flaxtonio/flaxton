@@ -84,7 +84,7 @@ func RunArguments(args []string) {
 								daemon_name := next_args[i+1]
 								sdn_map := make([]string, 1)
 								sdn_map[0] = next_args[i+2]
-								task_err := daemon.AddTask(lib.TaskPauseContainer, daemon_name, sdn_map)
+								_, task_err := fxdocker.AddTask(daemon.AuthKey, lib.TaskPauseContainer, daemon_name, sdn_map)
 								if task_err != nil {
 									fmt.Println(task_err)
 								} else {
@@ -98,7 +98,7 @@ func RunArguments(args []string) {
 								name := next_args[i+2]
 								sdn_map := make(map[string]string)
 								sdn_map["name"] = name
-								task_err := daemon.AddTask(lib.TaskSetDaemonName, daemon_name, sdn_map)
+								_, task_err := fxdocker.AddTask(daemon.AuthKey, lib.TaskSetDaemonName, daemon_name, sdn_map)
 								if task_err != nil {
 									fmt.Println(task_err)
 								} else {
@@ -140,47 +140,45 @@ func RunArguments(args []string) {
 					return
 				}
 				var (
-					container_id = ""
-					repo_name = ""
-					destination = ""
-					need_to_run = false
+					image = ""
+					run_command = ""
+					daemon = ""
+					count = ""
 				)
 				next_args := args[1:]
 				for i, arg := range args[1:] {
 					switch strings.ToLower(arg) {
-						case "-c":  // Container ID parameter
+						case "-img":  // Container ID parameter
 							{
-								container_id = next_args[i+1]
+								image = next_args[i+1]
 							}
-						case "-repo": // Repo Name
+						case "-cmd": // Repo Name
 							{
-								repo_name = next_args[i+1]
+								run_command = next_args[i+1]
 							}
 						case "-daemon": // Destination Host
 							{
-								destination = next_args[i+1]
+								daemon = next_args[i+1]
 							}
-						case "-run": // Need to run or not
+						case "-count": // Need to run or not
 							{
-								if strings.ToLower(next_args[i+1]) == "yes" || strings.ToLower(next_args[i+1]) == "y" {
-									need_to_run = true
-								}
+								count = next_args[i+1]
 							}
 						case "help", "-h", "-help":
 							{
 								fmt.Println("This command is for transfering container to another Flaxton Daemon")
 								fmt.Println("Formant: flaxton transfer <OPTIONS>")
 								fmt.Println("OPTIONS:")
-								fmt.Println("-c  : Option for specifiing container ID to transfer, could be also running container")
-								fmt.Println("-repo  : Option for specifiing Image repository name for resporing it in destination after transfer")
+								fmt.Println("-img  : Docker local image name, id or repository")
+								fmt.Println("-cmd  : If you want to start container after transfering, give this parameter as a run command")
+								fmt.Println("-count  : How many containers you want to start after transfering, default: 1")
 								fmt.Println("-daemon  : Destionation Daemon Name or ID")
-								fmt.Println("-run  : Turn on container after transfering or not, availbale options [Yes/No], [y/n], default is No")
 								os.Exit(1)
 							}
 					}
 				}
 
-				fxdocker.TransferContainer(container_id, repo_name, destination, need_to_run, console_config.Authorization)
+				fxdocker.TransferImage(image, daemon, run_command, count, console_config.Authorization)
 			}
 		case "-l", "login":
 			{

@@ -12,12 +12,21 @@ import (
 var (
 	DockerEndpoint = "unix:///var/run/docker.sock"
 	FlaxtonContainerRepo = getFlaxtonRepo()
+	DockerRegistry = getDockerRegistry()
 )
 
 func getFlaxtonRepo() string {
 	ret_val := "http://container.flaxton.io"
 	if len(os.Getenv("FLAXTON_REPO")) > 0 {
 		ret_val = os.Getenv("FLAXTON_REPO")
+	}
+	return ret_val
+}
+
+func getDockerRegistry() string {
+	ret_val := "http://container.flaxton.io:5000"
+	if len(os.Getenv("FLAXTON_REGISTERY")) > 0 {
+		ret_val = os.Getenv("FLAXTON_REGISTERY")
 	}
 	return ret_val
 }

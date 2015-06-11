@@ -6,33 +6,46 @@ import (
 	"encoding/json"
 )
 
-func PostJson(url string, data []byte, obj interface{}, auth string) error {
+func PostRequest(url string, data []byte, headers map[string]string) (resp_content []byte, err error) {
 	var (
 		req *http.Request
-		req_err error
+		resp *http.Response
 	)
-	req, req_err = http.NewRequest("POST", url, bytes.NewBuffer(data))
-	if req_err != nil {
-		return req_err
+	req, err = http.NewRequest("POST", url, bytes.NewBuffer(data))
+	if err != nil {
+		return
 	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", auth)
-
+	for k, v :=range headers {
+		req.Header.Set(k, v)
+	}
 	client := &http.Client{}
-	resp, resp_error := client.Do(req)
-	if resp_error != nil {
-		return resp_error
+	resp, err = client.Do(req)
+	if err != nil {
+		return
 	}
-	content, read_err := ioutil.ReadAll(resp.Body)
-	if read_err != nil {
-		return read_err
-	}
-	if obj != nil {
-		decode_error := json.Unmarshal(content, obj)
-		if decode_error != nil {
-			return decode_error
-		}
+	resp_content, err = ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return
 	}
 	resp.Body.Close()
+	return
+}
+
+func PostJson(url string, data []byte, obj interface{}, auth string) (err error) {
+	var (
+		content []byte
+	)
+
+	content, err = PostRequest(url, data, map[string]string{
+		"Content-Type": "application/json",
+		"Authorization": auth,
+	})
+
+	if obj != nil {
+		err = json.Unmarshal(content, obj)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }

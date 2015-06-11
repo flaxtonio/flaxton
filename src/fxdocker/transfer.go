@@ -4,16 +4,13 @@ import (
 	"net/http"
 	"github.com/fsouza/go-dockerclient"
 	"bytes"
-	"mime/multipart"
 	"fmt"
 	"os"
 	"log"
 	"encoding/json"
 	"io/ioutil"
-	"github.com/cheggaaa/pb"
-	"io"
 	"lib"
-	"time"
+	"strings"
 )
 
 var (
@@ -80,114 +77,68 @@ func FlaxtonConsoleLogin(username, password string) string {
 	return auth_map["authorization"].(string)
 }
 
-func TransferContainer(container_id, repo_name, dest_host string, transfer_and_run bool, authorization string) {
+func TransferImage(image, daemon, run_cmd, run_count string, authorization string) {
 	client, _ := docker.NewClient(DockerEndpoint)
-	container, error_inspect := client.InspectContainer(container_id)
-	if error_inspect != nil {
-		fmt.Println("Error Inspecting Container: ", error_inspect.Error())
-		os.Exit(1)
-	}
-
-	transfer_img := lib.TransferContainerCall{
-		Name: container.Name,
-		Cmd: container.Config.Cmd[0],
-		ImageName: repo_name,
-		ImageId: container.Image,
-		NeedToRun: transfer_and_run,
-		Authorization: authorization,
-		Destination: dest_host,
-	}
-	transfer_json_buf, convert_error := json.Marshal(transfer_img)
-	if convert_error != nil {
-		fmt.Println("Error converting TransferContainerCall structure to json: ", convert_error.Error())
-		os.Exit(1)
-	}
-
-	body := &bytes.Buffer{}
-	writer := multipart.NewWriter(body)
-	part, err := writer.CreateFormFile("docker_image", "docker_image.tar")
+	var (
+		err error
+		task_resp lib.TaskSendResponse
+		image_names []string
+		reg_image string
+	)
+	image_names = strings.Split(image, ":")
+	reg_image = fmt.Sprintf("%s/%s", DockerRegistry, image_names[0])
+	err = client.TagImage(image, docker.TagImageOptions{Repo:reg_image})
 	if err != nil {
-		fmt.Println("Unable to create form file: %s", err.Error())
+		fmt.Println("Error Tagging Image: ", reg_image)
+		fmt.Println(err.Error())
 		os.Exit(1)
 	}
-
-	fmt.Println("Exporting Image", transfer_img.ImageId)
-	export_error := client.ExportImage(docker.ExportImageOptions{Name: container.Image, OutputStream: part})
-	if export_error != nil {
-		fmt.Println("Error Exporting Container: %s", export_error)
-		os.Exit(1)
-	}
-
-	fmt.Println("Container Exported Successfully")
-	writer.WriteField("image_info", string(transfer_json_buf[:]))
-	err = writer.Close()
+	err = client.PushImage(docker.PushImageOptions{
+		Name:  reg_image,
+		Registry: DockerRegistry,
+		OutputStream: os.Stdout,
+	}, docker.AuthConfiguration{Username:"test",Password:"test",ServerAddress:DockerRegistry})
 	if err != nil {
+		fmt.Println("Error Pushing Image to Registery: ", DockerRegistry)
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
+	err = client.RemoveImage(reg_image)
+	if err != nil {
+		fmt.Println("Error UnTagging : ", reg_image)
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
 
-	// Adding progress bar for Uploading
-	bar := pb.New(body.Len()).SetUnits(pb.U_BYTES)
-	bar.Start()
+	fmt.Println("Image Pushed to registery")
+	fmt.Println("Adding Task for Daemon: ", daemon)
 
-	request, err2 := http.NewRequest("POST", fmt.Sprintf("%s/images/add", FlaxtonContainerRepo), io.TeeReader(body, bar))
-	if err2 != nil {
-		log.Fatal(err2)
+	task_resp, err = AddTask(authorization, lib.TaskImageTransfer, daemon, map[string]string{
+		"run_cmd": run_cmd,
+		"image": image,
+		"run_count": run_count,
+	})
+
+	if err != nil {
+		fmt.Println("Error Adding Task to repository: ", FlaxtonContainerRepo)
+		fmt.Println(err.Error())
 		os.Exit(1)
 	}
 
-	request.Header.Set("Authorization", authorization)
-	request.Header.Set("Content-Type", writer.FormDataContentType())
+	fmt.Println("Waiting task to be done: ", task_resp.TaskId, "\n")
 
-	fmt.Println("Making Post Request")
-
-	http_client := &http.Client{}
-	resp, err3 := http_client.Do(request)
-	if err3 != nil {
-		log.Fatal(err3)
-		os.Exit(1)
-	}
-
-	fmt.Println("Reuqest Done, Reading Response")
-	resp_body := &bytes.Buffer{}
-	_, resp_err := resp_body.ReadFrom(resp.Body)
-	if resp_err != nil {
-		log.Fatal(resp_err)
-		os.Exit(1)
-	}
-
-	resp.Body.Close()
-	var resp_obj lib.TransferResponse
-	convert_error = json.Unmarshal(resp_body.Bytes(), &resp_obj)
-	if convert_error != nil {
-		fmt.Println("Unable to convert response to JSON", convert_error.Error())
-		fmt.Println(resp_body.String())
-		os.Exit(1)
-	}
-
-	if resp_obj.Error {
-		fmt.Println("Error response from server:", resp_obj.Message)
-	}
-
-	fmt.Println("Waiting task to be done")
-	send_buf := []byte(fmt.Sprintf(`{"task_id": "%s"}`, resp_obj.TaskId))
-	task_res := lib.TransferResponse{}
-
-	for {
-		err = lib.PostJson(fmt.Sprintf("%s/task", FlaxtonContainerRepo), send_buf, &task_res, authorization)
-		if err != nil {
-			fmt.Println("Error sending check request: ", err.Error())
-		} else {
-			if task_res.Error {
-				fmt.Println("Task Returned with error: ", task_res.Message)
-				os.Exit(1)
-			}
-			if task_res.Done {
-				fmt.Println("Task Done successfully: ", task_res.Message)
-				os.Exit(1)
-			}
+	WaitTaskDone(task_resp.TaskId, authorization, func(){
+		fmt.Print(".") // This function is colled on every request
+	}, func(err error)bool{
+		fmt.Println("Error on sending request:", err.Error())
+		return false // if we will return true it will exit from Wait task
+	}, func(t_res lib.TaskResult)bool {
+		if t_res.Error {
+			fmt.Println("Error Message from Task:", t_res.Message)
 		}
-		fmt.Print(".")
-		time.Sleep(time.Second * 2)
-	}
+		if t_res.Done {
+			fmt.Println("Task Done:", task_resp.TaskId)
+		}
+		return true  // if this function is colled then we recieved taks marked as done or error
+	})
 }

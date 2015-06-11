@@ -3,14 +3,13 @@ package fxdocker
 import (
 	"github.com/fsouza/go-dockerclient"
 	"fmt"
-	"net/http"
 	"lib"
 	"log"
-	"strings"
-	"errors"
 	"time"
 	"encoding/json"
 	"strconv"
+	"os"
+	"strings"
 )
 
 func (fxd *FxDaemon) RunTasks() {
@@ -33,25 +32,27 @@ func (fxd *FxDaemon) RunTasks() {
 			for _, t := range current_tasks {
 				fmt.Println("Task: ", t.TaskID, t.Type)
 				switch t.Type {
-				case lib.TaskContainerTransfer:
+				case lib.TaskImageTransfer:
 					{
 						current_result = lib.TaskResult{
 							TaskID:t.TaskID,
 							StartTime:time.Now().UTC().Unix(),
 							Error: false,
+							Done: false,
 							Message: "",
 						}
-						cont_call := lib.TransferContainerCall{}
+						cont_call := make(map[string]string)
 						err := t.ConvertData(&cont_call)
 						if err != nil {
 							current_result.Error = true
 							current_result.Message = err.Error()
 						} else {
-							_, err = fxd.TransferContainer(cont_call)
+							err = fxd.TransferImage(cont_call)
 							if err != nil {
 								current_result.Error = true
 								current_result.Message = err.Error()
 							} else {
+								current_result.Done = true
 								current_result.EndTime = time.Now().UTC().Unix()
 							}
 						}
@@ -252,86 +253,85 @@ func (fxd *FxDaemon) RunTasks() {
 }
 
 
-func (fxd *FxDaemon) AddTask(task_type, daemon string, data interface{}) error {
+func AddTask(auth, task_type, daemon string, data interface{}) (task_resp lib.TaskSendResponse, err error) {
 	sdn_map := make(map[string]interface{})
 	sdn_map["task_type"] = task_type
 	sdn_map["daemon"] = daemon
 	sdn_map["data"] = data
-	send_buf, marshal_error := json.Marshal(sdn_map)
-	if marshal_error != nil {
-		return marshal_error
+	var send_buf []byte
+	send_buf, err = json.Marshal(sdn_map)
+	if err != nil {
+		return
 	}
-	return lib.PostJson(fmt.Sprintf("%s/task/add", FlaxtonContainerRepo), send_buf, nil, fxd.AuthKey)
+	err = lib.PostJson(fmt.Sprintf("%s/task/add", FlaxtonContainerRepo), send_buf, &task_resp, auth)
+	return
 }
 
-func (fxd *FxDaemon) TransferContainer(container_cmd lib.TransferContainerCall) (container_id string, err error) {
-	fmt.Println("Getting Image from Flaxton Repo", FlaxtonContainerRepo)
-	var resp *http.Response
-	http_client := &http.Client{}
-	req, _ := http.NewRequest("GET", fmt.Sprintf("%s/images/%s", FlaxtonContainerRepo, container_cmd.ImageId), nil)
-	req.Header.Set("Authorization", container_cmd.Authorization)
-	resp, err = http_client.Do(req)
-	if err != nil {
-		fmt.Println(err.Error())
-		return
-	}
-	defer resp.Body.Close()
-
-	fmt.Println("Loading Repo File to Docker Image Loader")
-	client, _ := docker.NewClient(fxd.DockerEndpoint)
-	err = client.LoadImage(docker.LoadImageOptions{InputStream: resp.Body})
-	if err != nil {
-		log.Panic(err.Error())
-		return
-	}
-
-	image_name_split := strings.Split(container_cmd.ImageName, ":")
-
-	fmt.Println("Making Sure That we are loaded image with Same ID", container_cmd.ImageId)
-	imgs, _ := client.ListImages(docker.ListImagesOptions{All: false})
-	img_found := false
-	for _, img := range imgs {
-		if img.ID == container_cmd.ImageId {
-			img_found = true
-		}
-	}
-	if !img_found {
-		err = errors.New("Image Not Found After Loading it to Docker !")
-		fmt.Println(err.Error())
-		return "", err
-	}
-
-	fmt.Println("Image Found", container_cmd.ImageId)
-	fmt.Println("Making Name Tagging", container_cmd.ImageName)
-	client.TagImage(container_cmd.ImageId, docker.TagImageOptions{
-		Repo: image_name_split[0],
-		Tag: image_name_split[1],
-		Force: true,
-	})
-
-	fmt.Println("Creating Container Based on Image", container_cmd.ImageId)
-	var cont *docker.Container
-	cont, err = client.CreateContainer(docker.CreateContainerOptions{
-		//			Name: fmt.Sprintf("%s_%s", strings.Replace(strings.Replace(image_name, ":", "_", -1),"/","_", -1), "main"),
-		Config: &docker.Config{Cmd: []string{container_cmd.Cmd}, Image: container_cmd.ImageId,AttachStdin: false, AttachStderr: false, AttachStdout: false},
-		HostConfig: &docker.HostConfig{},
-	})
-
-	if err != nil {
-		log.Panic(err.Error())
-		return
-	}
-
-	container_id = cont.ID
-
-	if container_cmd.NeedToRun {
-		fmt.Println("Running Container", container_id)
-		err = client.StartContainer(cont.ID, &docker.HostConfig{})
+func WaitTaskDone(task_id, auth string, onTik func(), onError func(error)bool, onDone func(lib.TaskResult)bool) (task_res lib.TaskResult, err error) {
+	send_buf := []byte(fmt.Sprintf(`{"task_id": "%s"}`, task_id))
+	for {
+		err = lib.PostJson(fmt.Sprintf("%s/task", FlaxtonContainerRepo), send_buf, &task_res, auth)
 		if err != nil {
-			log.Panic(err.Error())
-			return
+			if onError != nil {
+				if onError(err) {
+					return
+				}
+			}
+		} else {
+			if task_res.Error || task_res.Done {
+				if onDone != nil {
+					if onDone(task_res) {
+						return
+					}
+				}
+			}
+		}
+		if onTik != nil {
+			onTik()
+		}
+		time.Sleep(time.Second * 2)
+	}
+}
+
+func (fxd *FxDaemon) TransferImage(container_cmd map[string]string) (err error) {
+	client, _ := docker.NewClient(fxd.DockerEndpoint)
+	var (
+		image_names []string
+		reg_image string
+	)
+
+	image_names = strings.Split(container_cmd["image"], ":")
+	reg_image = fmt.Sprintf("%s/%s", DockerRegistry, image_names[0])
+
+	client.PullImage(docker.PullImageOptions{
+		Registry: reg_image,
+		Tag: image_names[1],
+		OutputStream:os.Stdout,
+	}, docker.AuthConfiguration{ServerAddress:DockerRegistry})
+
+	if len(container_cmd["run_cmd"]) > 0 {  // if container start command set then we need to create container and run it
+		var (
+			cont *docker.Container
+			count = 1
+		)
+		if len(container_cmd["run_count"]) > 0 {
+			count, err = strconv.Atoi(container_cmd["run_count"])
+			if err != nil {
+				count = 1
+			}
+		}
+		fmt.Println("Running Containers", count)
+		for i := 0; i < count; i++  {
+			cont, err = client.CreateContainer(docker.CreateContainerOptions{
+				Config: &docker.Config{Cmd: []string{container_cmd["run_cmd"]}, Image: container_cmd["image"],AttachStdin: false, AttachStderr: false, AttachStdout: false},
+				HostConfig: &docker.HostConfig{},
+			})
+			if err != nil {
+				return err
+			}
+			client.StartContainer(cont.ID, &docker.HostConfig{})
+			fmt.Println(cont.ID)
 		}
 	}
-
-	return container_id, nil
+	return nil
 }
