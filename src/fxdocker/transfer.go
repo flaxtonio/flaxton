@@ -96,11 +96,13 @@ func TransferImage(image, daemon, run_cmd, run_count string, authorization strin
 	err = client.PushImage(docker.PushImageOptions{
 		Name:  reg_image,
 		Registry: DockerRegistry,
+		Tag: image_names[1],
 		OutputStream: os.Stdout,
 	}, docker.AuthConfiguration{Username:"test",Password:"test",ServerAddress:DockerRegistry})
 	if err != nil {
 		fmt.Println("Error Pushing Image to Registery: ", DockerRegistry)
 		fmt.Println(err.Error())
+		client.RemoveImage(reg_image)
 		os.Exit(1)
 	}
 	err = client.RemoveImage(reg_image)

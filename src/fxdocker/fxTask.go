@@ -306,11 +306,29 @@ func (fxd *FxDaemon) TransferImage(container_cmd map[string]string) (err error) 
 	err = client.PullImage(docker.PullImageOptions{
 		Repository: image_names[0],
 		Registry: DockerRegistry,
+		Tag: image_names[1],
 		OutputStream:os.Stdout,
 	}, docker.AuthConfiguration{Username:"test",Password:"test",ServerAddress:DockerRegistry})
 
 	if err != nil {
 		fmt.Println("Error pulling image: ", reg_image)
+		fmt.Println(err.Error())
+		return
+	}
+
+	err = client.TagImage(fmt.Sprintf("%s:%s", reg_image, image_names[1]), docker.TagImageOptions{Repo:image_names[0], Tag:image_names[1]})
+
+	if err != nil {
+		fmt.Println("Error Tagging image: ", image_names[0])
+		fmt.Println(err.Error())
+		client.RemoveImage(reg_image)
+		return
+	}
+
+	err = client.RemoveImage(reg_image)
+
+	if err != nil {
+		fmt.Println("Error Rmoving image: ", reg_image)
 		fmt.Println(err.Error())
 		return
 	}
