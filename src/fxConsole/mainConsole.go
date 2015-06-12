@@ -40,20 +40,6 @@ func RunArguments(args []string) {
 				next_args := args[1:]
 				for i, arg := range args[1:]  {
 					switch arg {
-						case "list":  // Get list of all daemons for current user
-							{
-								var list_resp []fxdocker.FxDaemon
-								request_error := lib.PostJson(fmt.Sprintf("%s/daemon/list", fxdocker.FlaxtonContainerRepo), []byte("{}"), &list_resp, console_config.Authorization)
-								if request_error != nil {
-									fmt.Println("Response Error: ", request_error.Error())
-									os.Exit(1)
-								}
-								fmt.Println("List of Daemons")
-								for _, d := range list_resp {
-									fmt.Println(d.ID, "     ", d.Name)
-								}
-								os.Exit(1)
-							}
 						case "-balancer":
 							{
 								local_port, _ := strconv.Atoi(next_args[i+1])
@@ -78,6 +64,84 @@ func RunArguments(args []string) {
 						case "-offline":
 							{
 								daemon.Offline = true
+							}
+						case "stop-port":
+							{
+								daemon_name := next_args[i+1]
+								port_str := next_args[i+2]
+								port, err := strconv.Atoi(port_str)
+								if err != nil {
+									fmt.Println(err.Error())
+									os.Exit(1)
+								}
+								sdn_map := make(map[string]int)
+								sdn_map["port"] = port
+								task_res, task_err := fxdocker.AddTask(daemon.AuthKey, lib.TaskStopBalancerPort, daemon_name, sdn_map)
+								if task_err != nil {
+									fmt.Println(task_err)
+								} else {
+									fmt.Println("Task Sent !")
+									fmt.Println(task_res.TaskId)
+									fxdocker.WaitTaskDone(task_res.TaskId, daemon.AuthKey, func(){
+										fmt.Print(".")
+									}, func(err error)bool{
+										fmt.Println(err.Error())
+										return false
+									}, func(t lib.TaskResult)bool{
+										fmt.Println(t.Message)
+										return true
+									})
+								}
+								os.Exit(1)
+							}
+						case "map-image":
+							{
+								daemon_name := next_args[i+1]
+								port_str := next_args[i+2]
+								port, err := strconv.Atoi(port_str)
+								if err != nil {
+									fmt.Println(err.Error())
+									os.Exit(1)
+								}
+								image := next_args[i+3]
+								image_port_str := next_args[i+4]
+								image_port, err2 := strconv.Atoi(image_port_str)
+								if err2 != nil {
+									fmt.Println(err2.Error())
+									os.Exit(1)
+								}
+								sdn_map := make(map[string]fxdocker.BalancerImageInfo)
+								sdn_map[port_str] = fxdocker.BalancerImageInfo{Port:port,ImageName:image,ImagePort:image_port}
+								task_res, task_err := fxdocker.AddTask(daemon.AuthKey, lib.TaskAddBalancingImage, daemon_name, sdn_map)
+								if task_err != nil {
+									fmt.Println(task_err)
+								} else {
+									fmt.Println("Task Sent !")
+									fxdocker.WaitTaskDone(task_res.TaskId, daemon.AuthKey, func(){
+										fmt.Print(".")
+									}, func(err error)bool{
+										fmt.Println(err.Error())
+										return false
+									}, func(t lib.TaskResult)bool{
+										fmt.Println(t.Message)
+										return true
+									})
+								}
+								os.Exit(1)
+							}
+						case "list":  // Get list of all daemons for current user
+							{
+								var list_resp []fxdocker.FxDaemon
+								request_error := lib.PostJson(fmt.Sprintf("%s/daemon/list", fxdocker.FlaxtonContainerRepo), []byte("{}"), &list_resp, console_config.Authorization)
+								if request_error != nil {
+									fmt.Println("Response Error: ", request_error.Error())
+									os.Exit(1)
+								}
+								fmt.Println("List of Daemons")
+								for _, d := range list_resp {
+									fmt.Println(d.ID, "     ", d.Name)
+								}
+								os.Exit(1)
 							}
 						case "pause-container":
 							{
@@ -111,7 +175,10 @@ func RunArguments(args []string) {
 								fmt.Println("This command is for Starting Flaxton daemon load balancer and daemon API server")
 								fmt.Println("Formant: flaxton daemon [COMMAND] <OPTIONS>")
 								fmt.Println("COMMAND:")
+								fmt.Println("set-name  : Set name for daemon, to access with human friendly names")
 								fmt.Println("list  : List of daemon servers for current logged in user")
+								fmt.Println("map-image  : Map image to balancer port for specific daemon: <balancer_name,id> <balancing_port> <image_name> <image_port>")
+								fmt.Println("stop-port  : Stop balancing port for specific daemon: <balancer_name,id> <balancing port to stop>")
 								fmt.Println("OPTIONS:")
 								fmt.Println("-balancer  : Options should be followed by this direction - local_port image_name image_port")
 								fmt.Println("-child  : Add chaild server with this combination: [balancing port] [ip address]")

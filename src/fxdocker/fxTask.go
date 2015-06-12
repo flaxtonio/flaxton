@@ -67,6 +67,8 @@ func (fxd *FxDaemon) RunTasks() {
 						} else {
 							fxd.Name = name_map["name"]
 							fxd.Register()
+							current_result.Done = true
+							current_result.Message = fmt.Sprintf("Daemon Name Registered %s", fxd.Name)
 							current_result.EndTime = time.Now().UTC().Unix()
 						}
 					}
@@ -85,6 +87,7 @@ func (fxd *FxDaemon) RunTasks() {
 									fxd.BalancerPortChild[port] = make([]ChildServer, 0)
 								}
 								fxd.BalancerPortChild[port] = append(fxd.BalancerPortChild[port], ch)
+								current_result.Done = true
 								current_result.EndTime = time.Now().UTC().Unix()
 							}
 						}
@@ -104,7 +107,10 @@ func (fxd *FxDaemon) RunTasks() {
 									fxd.BalancerPortImages[port] = make([]BalancerImageInfo, 0)
 								}
 								fxd.BalancerPortImages[port] = append(fxd.BalancerPortImages[port], im)
+								go fxd.StartBalancerPort(port)
+								current_result.Message = fmt.Sprintf("%s%d port balancing started for image %s\n", current_result.Message, port, im.ImageName)
 							}
+							current_result.Done = true
 							current_result.EndTime = time.Now().UTC().Unix()
 						}
 					}
@@ -116,7 +122,9 @@ func (fxd *FxDaemon) RunTasks() {
 							current_result.Error = true
 							current_result.Message = err.Error()
 						} else {
-							fxd.StartBalancerPort(im_map["port"])
+							go fxd.StartBalancerPort(im_map["port"])
+							current_result.Message = fmt.Sprintf("%d port balancing started", im_map["port"])
+							current_result.Done = true
 							current_result.EndTime = time.Now().UTC().Unix()
 						}
 					}
@@ -128,7 +136,9 @@ func (fxd *FxDaemon) RunTasks() {
 							current_result.Error = true
 							current_result.Message = err.Error()
 						} else {
-							fxd.StopBalancerPort(im_map["port"])
+							go fxd.StopBalancerPort(im_map["port"])
+							current_result.Message = fmt.Sprintf("%d port balancing stoped", im_map["port"])
+							current_result.Done = true
 							current_result.EndTime = time.Now().UTC().Unix()
 						}
 					}
