@@ -7,6 +7,8 @@ import (
 	"github.com/siddontang/ledisdb/ledis"
 	"log"
 	"encoding/json"
+	"bytes"
+	"encoding/binary"
 )
 
 type TestType struct {
@@ -19,9 +21,10 @@ func main() {
 	l, _ := ledis.Open(conf)
 	db, _ := l.Select(0)
 	k := []byte("test_key")
-	d, _ := StructToByte(TestType{FieldA: "This is a test LedisDB example for Lists", FieldB: 100})
-	start := time.Now()
+	start := time.Time{}
+	start = time.Now()
 
+	d, _ := StructToEndian(TestType{FieldA: "This is a test LedisDB example for Lists", FieldB: 100})
 	db.LPush(k, d)
 
 	elapsed := time.Since(start)
@@ -31,7 +34,7 @@ func main() {
 
 	dx, _ := db.LPop(k)
 	rd := TestType{}
-	ByteToStruct(dx, &rd)
+	EndianToStruct(dx, &rd)
 	elapsed = time.Since(start)
 	log.Printf("Done in %s", elapsed)
 
@@ -47,5 +50,18 @@ func StructToByte(data interface{}) (ret_data []byte, err error) {
 
 func ByteToStruct(b []byte, ret_data interface{}) (err error) {
 	err = json.Unmarshal(b, &ret_data)
+	return
+}
+
+func StructToEndian(t interface{}) (ret_data []byte, err error) {
+	buf := &bytes.Buffer{}
+	err = binary.Write(buf, binary.BigEndian, t)
+	ret_data = buf.Bytes()
+	return
+}
+
+func EndianToStruct(data []byte, t interface{}) (err error) {
+	buf := bytes.NewBuffer(data)
+	err = binary.Read(buf, binary.BigEndian, t)
 	return
 }
