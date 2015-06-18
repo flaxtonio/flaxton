@@ -28,9 +28,9 @@ func main() {
 			}
 		case "client":
 			{
-				origin := "http://localhost/"
+//				origin := "http://localhost/"
 				url := "ws://localhost:12345/echo"
-				ws, err := websocket.Dial(url, "", origin)
+				ws, err := websocket.Dial(url, "", "")
 				if err != nil {
 					log.Fatal(err)
 				}
