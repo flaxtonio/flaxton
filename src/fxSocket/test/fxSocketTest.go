@@ -41,7 +41,7 @@ func main() {
 					fmt.Println(e.Error())
 				}
 				c.Emit("test", "Test Message")
-				c.HandleConnection(c.ParentConnection)
+				c.WaitForEvents()
 			}
 	}
 }

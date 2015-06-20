@@ -193,3 +193,8 @@ func NewChild(parent_address string) (child Child, err error) {
 func (child *Child) Emit(event string, data interface{}) {
 	child.ParentConnection.Emit(event, data)
 }
+
+func (child *Child) WaitForEvents() {
+	child.HandleConnection(child.ParentConnection)
+}
+
