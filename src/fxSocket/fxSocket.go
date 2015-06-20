@@ -159,6 +159,10 @@ func (p *Parent) Listen() {
 		err error
 	)
 
+	p.On("child", func(nb []byte, s Socket){
+		p.Childs[string(nb)] = s
+	})
+
 	for {
 		conn, err = p.Listener.AcceptTCP()
 		if err != nil {
