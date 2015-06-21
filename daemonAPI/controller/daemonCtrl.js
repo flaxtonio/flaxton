@@ -182,5 +182,37 @@ module.exports = {
                 });
             });
         });
+    },
+    daemon_state: function (req, res) {
+        Daemon.find({}, function (daemon_error, daemons) {
+            if(daemon_error)
+            {
+                res.status(500).send("Unable to get Daemon servers");
+                return;
+            }
+
+            var ret_data = {};
+            async.forEach(daemons, function (daemon, next) {
+                StateLogger.find({ $query: {daemon: daemon._id}, $orderby: { date: -1 } }, function(state_error, loggers){
+                    if(daemon_error)
+                    {
+                        res.status(500).send("Unable to get State loggers for daemon " + daemon.id);
+                        return;
+                    }
+                    ret_data[daemon.id] = loggers[0].toObject();
+                    next();
+                });
+            }, function(end_error){
+                if (end_error)
+                {
+                    if(daemon_error)
+                    {
+                        res.status(500).send("Error running foreach");
+                        return;
+                    }
+                }
+                res.json(ret_data);
+            });
+        });
     }
 };

@@ -54,4 +54,7 @@ router.post('/notify', isLoggedIn, daemonCtrl.notifications);
 router.post('/task', isLoggedIn, daemonCtrl.task_result);
 router.post('/task/add', isLoggedIn, daemonCtrl.set_task);
 
+// DockingLogic API calls
+
+
 module.exports = router;

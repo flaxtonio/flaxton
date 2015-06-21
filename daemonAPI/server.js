@@ -4,7 +4,7 @@
 
 // Fist of all lets defined modules for using it from other parts of code
 var mongoose = require('mongoose');
-require('mongoose.models.autoload')(mongoose, require('path').join(__dirname, '../', 'model'), true).connect('mongodb://127.0.0.1/flaxton');
+require('mongoose.models.autoload')(mongoose, require('path').join('model'), true).connect('mongodb://127.0.0.1/flaxton');
 
 // call the packages we need
 var express    = require('express')
