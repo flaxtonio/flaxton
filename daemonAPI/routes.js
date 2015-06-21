@@ -53,6 +53,7 @@ router.post('/daemon/list', isLoggedIn, daemonCtrl.get_daemon); // Registering d
 router.post('/notify', isLoggedIn, daemonCtrl.notifications);
 router.post('/task', isLoggedIn, daemonCtrl.task_result);
 router.post('/task/add', isLoggedIn, daemonCtrl.set_task);
+router.post('/daemon-state', daemonCtrl.daemon_state);
 
 // DockingLogic API calls
 
