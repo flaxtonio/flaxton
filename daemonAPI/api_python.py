@@ -4,15 +4,18 @@ import time
 
 def AddContainerCall(container_id, daemon):
 	print(daemon)
+	cont = []
+	cont.append(container_id)
+	cont.append("aaaa")
 	url = 'http://container.flaxton.io/api/task/add'
 	send_data = {'task_type' : 'pause_container',
 		'daemon' : daemon,
-		'data': [container_id]
+		'data': cont
 	}
 	r = requests.post(url, data=send_data)
 	print(r.text)
 
-last_container = {}
+last_container = []
 
 while True:
 	r = requests.get('http://container.flaxton.io/daemon-state')
@@ -22,7 +25,7 @@ while True:
 		if len(info["data"]["containers"].keys()) == 2 and len(last_container) != 0:
 			print(last_container)
 			AddContainerCall(last_container, daemon)
-			exit(1)
+			last_container = []
 		else:
 			first = list(info["data"]["containers"].keys())[0]
 			last_container = info["data"]["containers"][first]["inspect"]["Config"]["Hostname"]
