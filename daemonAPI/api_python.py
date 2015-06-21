@@ -3,6 +3,7 @@ import requests
 import time
 
 def AddContainerCall(container_id, daemon):
+	print(daemon)
 	url = 'http://container.flaxton.io/api/task/add'
 	send_data = {'task_type' : 'pause_container',
 		'daemon' : daemon,
