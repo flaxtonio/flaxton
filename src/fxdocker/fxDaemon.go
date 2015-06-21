@@ -76,18 +76,14 @@ func (fxd *FxDaemon) Register() error {
 }
 
 func (fxd *FxDaemon) Run() {
-	fmt.Println("ssssssssssss")
 	if !fxd.Offline {
 		go fxd.ParentNotifier()
 		go fxd.RunTasks()
 	}
 
 	go fxd.StartContainerInspector()
-	fmt.Println("Container Inspector runned")
 	go fxd.StartImageInspector()
-	fmt.Println("Image Inspector runned")
 	go fxd.PortToAddressMapping()
-	fmt.Println("Port Address mapping")
 
 	ipTablesController.InitRouting()
 }
