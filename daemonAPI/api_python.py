@@ -21,12 +21,12 @@ while True:
 	r = requests.get('http://container.flaxton.io/daemon-state')
 	data = json.loads(r.text)
 	for daemon, info in data.items():
-		print(len(info["data"]["containers"].keys()))
-		if len(info["data"]["containers"].keys()) == 2 and len(last_container) != 0:
-			print(last_container)
-			AddContainerCall(last_container, daemon)
-			last_container = []
-		else:
-			first = list(info["data"]["containers"].keys())[0]
-			last_container = info["data"]["containers"][first]["inspect"]["Config"]["Hostname"]
+		if "containers" in info["data"]:
+			if len(info["data"]["containers"].keys()) == 2 and len(last_container) != 0:
+				AddContainerCall(last_container, daemon)
+				last_container = []
+				time.sleep(10)
+			else:
+				first = list(info["data"]["containers"].keys())[0]
+				last_container = info["data"]["containers"][first]["inspect"]["Config"]["Hostname"]
 	time.sleep(2)
