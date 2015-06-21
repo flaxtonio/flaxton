@@ -28,7 +28,7 @@ function isLoggedIn(req, res, next) {
             req.daemon_id = auth_daemon[1];
             req.headers["authorization"] = auth_daemon[0];
         }
-
+        console.log(req.headers["authorization"]);
         var username_pass = User.decryptFromHeader(req.headers["authorization"]).split("|");
         req.body.username = username_pass[0];
         req.body.password = username_pass[1];
