@@ -20,8 +20,8 @@ last_container = {}
 
 while True:
 	data = json.load(urllib2.urlopen('http://container.flaxton.io/daemon-state'))
+	print data
 	for daemon, info in data:
-		print daemon
 		if len(info["data"]["containers"]) == 0:
 			AddContainerCall(last_container.id, daemon)
 		else:

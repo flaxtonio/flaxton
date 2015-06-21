@@ -200,6 +200,9 @@ module.exports = {
                         return;
                     }
                     ret_data[daemon.id] = loggers[0];
+                    console.log(loggers[0]);
+                    console.log(typeof loggers[0]);
+
                     next();
                 });
             }, function(end_error){
