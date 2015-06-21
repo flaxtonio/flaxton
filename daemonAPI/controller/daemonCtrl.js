@@ -72,6 +72,23 @@ module.exports = {
             });
         });
     },
+    set_task2: function(req, res) {
+        Daemon.findOne({ daemon_id: req.body.daemon}, function(daemon_error, daemon){
+            if(daemon_error || !daemon)
+            {
+                res.status(404).send("Daemon Server not found");
+                return;
+            }
+
+            var task = new Task();
+            task.task_type = req.body.task_type;
+            task.data = req.body.data;
+            task.daemon = daemon._id;
+            task.save(function(){
+                res.json({ task_id: task._id.toString(), message: "", error: false });
+            });
+        });
+    },
     task_result: function(req, res) {
         Task.findOne({ _id: req.body.task_id }, function(task_error, task) {
             if(task_error || !task)

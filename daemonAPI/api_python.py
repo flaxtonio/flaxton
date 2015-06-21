@@ -1,4 +1,5 @@
 import json
+import requests
 import urllib2
 import time
 
@@ -8,11 +9,7 @@ def AddContainerCall(container_id, daemon):
 		'daemon' : daemon,
 		'data': [container_id]
 	}
-	data = urllib.urlencode(send_data)
-	req = urllib2.Request(url, data)
-	response = urllib2.urlopen(req)
-	the_page = response.read()
-	pass
+	r = requests.post(url, data=send_data)
 
 last_container = {}
 
