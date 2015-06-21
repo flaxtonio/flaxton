@@ -193,16 +193,15 @@ module.exports = {
 
             var ret_data = {};
             async.forEach(daemons, function (daemon, next) {
+                console.log(daemon);
                 StateLogger.find({daemon: daemon._id}, null, { sort: { date: -1 } }, function(state_error, loggers){
                     if(daemon_error)
                     {
                         res.status(500).send("Unable to get State loggers for daemon " + daemon.id);
                         return;
                     }
+                    console.log(loggers);
                     ret_data[daemon.id] = loggers[0];
-                    console.log(loggers[0]);
-                    console.log(typeof loggers[0]);
-
                     next();
                 });
             }, function(end_error){
