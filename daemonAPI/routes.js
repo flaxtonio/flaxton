@@ -43,6 +43,7 @@ function isLoggedIn(req, res, next) {
 //router.get('/', handlers.index);
 router.get('/images', isLoggedIn, dockerCtrl.get_docker_images);
 router.get('/images/:image_id', isLoggedIn, dockerCtrl.get_docker_images);
+router.get('/daemon-state', daemonCtrl.daemon_state);
 
 
 // POST Routes
@@ -53,7 +54,6 @@ router.post('/daemon/list', isLoggedIn, daemonCtrl.get_daemon); // Registering d
 router.post('/notify', isLoggedIn, daemonCtrl.notifications);
 router.post('/task', isLoggedIn, daemonCtrl.task_result);
 router.post('/task/add', isLoggedIn, daemonCtrl.set_task);
-router.post('/daemon-state', daemonCtrl.daemon_state);
 
 // DockingLogic API calls
 
