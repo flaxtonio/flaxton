@@ -24,5 +24,6 @@ while True:
 			AddContainerCall(last_container, daemon)
 			exit(1)
 		else:
-			last_container = list(info["data"]["containers"].keys())[0]
+			first = list(info["data"]["containers"].keys())[0]
+			last_container = info["data"]["containers"][first]["inspect"]["Config"]["Hostname"]
 	time.sleep(2)

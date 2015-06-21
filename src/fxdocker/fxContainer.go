@@ -4,6 +4,7 @@ import (
 	"github.com/fsouza/go-dockerclient"
 	"time"
 	"os"
+	"fmt"
 )
 
 
@@ -98,5 +99,6 @@ func StopContainer(container_id string, timeout uint) error {
 }
 
 func PauseContainer(container_id string) error {
+	fmt.Println(container_id)
 	return dockerClient.PauseContainer(container_id)
 }
