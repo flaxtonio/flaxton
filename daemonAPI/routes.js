@@ -54,12 +54,4 @@ router.post('/notify', isLoggedIn, daemonCtrl.notifications);
 router.post('/task', isLoggedIn, daemonCtrl.task_result);
 router.post('/task/add', isLoggedIn, daemonCtrl.set_task);
 
-
-var email = require("./mailer");
-
-router.post('/send/email', function(req, res){
-    email.send(req.body.email);
-    res.send("ok");
-});
-
 module.exports = router;
