@@ -76,7 +76,7 @@ func (fxd *FxDaemon) Register() error {
 }
 
 func (fxd *FxDaemon) Run() {
-
+	fmt.Println("ssssssssssss")
 	if !fxd.Offline {
 		go fxd.ParentNotifier()
 		go fxd.RunTasks()
