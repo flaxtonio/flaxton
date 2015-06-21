@@ -6,9 +6,7 @@ def AddContainerCall(container_id, daemon):
 	url = 'http://container.flaxton.io/api/task/add'
 	send_data = {'task_type' : 'start_container',
 		'daemon' : daemon,
-		'data': {
-		    container_id: {},
-		}
+		'data': [container_id]
 	}
 	data = urllib.urlencode(send_data)
 	req = urllib2.Request(url, data)
@@ -20,10 +18,11 @@ last_container = {}
 
 while True:
 	data = json.load(urllib2.urlopen('http://container.flaxton.io/daemon-state'))
-	print data
-	for daemon, info in data:
-		if len(info["data"]["containers"]) == 0:
-			AddContainerCall(last_container.id, daemon)
+	for daemon, info in data.items():
+		print len(info["data"]["containers"].keys())
+		if len(info["data"]["containers"].keys()) == 2:
+			print last_container
+			AddContainerCall(last_container, daemon)
 		else:
-			last_container = info["data"]["containers"][0]
+			last_container = info["data"]["containers"].keys()[0]
 	time.sleep(2)

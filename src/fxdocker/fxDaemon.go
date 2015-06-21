@@ -83,8 +83,11 @@ func (fxd *FxDaemon) Run() {
 	}
 
 	go fxd.StartContainerInspector()
+	fmt.Println("Container Inspector runned")
 	go fxd.StartImageInspector()
+	fmt.Println("Image Inspector runned")
 	go fxd.PortToAddressMapping()
+	fmt.Println("Port Address mapping")
 
 	ipTablesController.InitRouting()
 }
