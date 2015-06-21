@@ -199,7 +199,7 @@ module.exports = {
                         res.status(500).send("Unable to get State loggers for daemon " + daemon.id);
                         return;
                     }
-                    ret_data[daemon.id] = loggers[0].toObject();
+                    ret_data[daemon.id] = loggers[0];
                     next();
                 });
             }, function(end_error){
