@@ -193,7 +193,7 @@ module.exports = {
 
             var ret_data = {};
             async.forEach(daemons, function (daemon, next) {
-                StateLogger.find({ $query: {daemon: daemon._id}, $orderby: { date: -1 } }, function(state_error, loggers){
+                StateLogger.find({daemon: daemon._id}, null, { sort: { date: -1 } }, function(state_error, loggers){
                     if(daemon_error)
                     {
                         res.status(500).send("Unable to get State loggers for daemon " + daemon.id);
