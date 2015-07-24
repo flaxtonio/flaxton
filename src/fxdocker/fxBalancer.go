@@ -61,6 +61,11 @@ func (fxd *FxDaemon) PortToAddressMapping() {
 		go fxd.StartBalancerPort(port)
 	}
 
+	// Starting available ports for this moment
+	for port, _ :=range fxd.BalancerPortChild {
+		go fxd.StartBalancerPort(port)
+	}
+
 
 	for {
 		// Mapping Containers per Image
