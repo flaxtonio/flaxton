@@ -43,7 +43,7 @@ func InitRouting() {
 
 	for {
 		<- IpCommandChan
-		time.Sleep(time.Millisecond * 500)
+		time.Sleep(time.Millisecond * 100)
 		tablesCMD.RecalculateDNATRole()
 		IpCommandChan <- 1
 	}
