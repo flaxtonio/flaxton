@@ -46,7 +46,6 @@ func getTrafficType() bool {
 }
 
 type IpTables struct {
-	OutputTraffic bool
 }
 
 func EnableForwarding() error {
@@ -110,13 +109,13 @@ func deny_role(local_port, remote_adr, protocol, add_delete string) (cmd *exec.C
 }
 
 func (ip *IpTables) ForwardIp(local_port, remote_adr, protocol string) error {
-	cmd := forward_role(ip.OutputTraffic, local_port, remote_adr, protocol, "-A")
+	cmd := forward_role(outputTraffic, local_port, remote_adr, protocol, "-A")
 	err := cmd.Run()
 	return err
 }
 
 func (ip *IpTables) ClearForwardIp(local_port, remote_adr, protocol string) error {
-	cmd := forward_role(ip.OutputTraffic, local_port, remote_adr, protocol, "-D")
+	cmd := forward_role(outputTraffic, local_port, remote_adr, protocol, "-D")
 	err := cmd.Run()
 	return err
 }
