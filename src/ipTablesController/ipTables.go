@@ -8,6 +8,8 @@ sysctl net.ipv4.ip_forward=1
 
 // For Remote routing
 iptables -t nat -A PREROUTING -p tcp --dport port -j DNAT --to-destination ip:port
+// IF traffic is load balanced by outcomming which means after proxy pass
+iptables -t nat -A OUTPUT -p tcp --dport port -j DNAT --to-destination ip:port
 
 // For Local routing
 iptables -t nat -A OUTPUT -m addrtype --src-type LOCAL --dst-type LOCAL -p tcp --sport [source_port] --dport [dest_port] -j DNAT --to-destination [ip]
@@ -28,7 +30,23 @@ const (
 	IpTablesCMD = "iptables"
 )
 
+var (
+	outputTraffic = getTrafficType()
+)
+
+func getTrafficType() bool {
+	ret_val := "0"
+	if len(os.Getenv("FLAXTON_OUTPUT")) > 0 {
+		ret_val = os.Getenv("FLAXTON_OUTPUT")
+	}
+	if ret_val == "0" {
+		retrun false
+	}
+	return true
+}
+
 type IpTables struct {
+	OutputTraffic bool
 }
 
 func EnableForwarding() error {
@@ -67,11 +85,13 @@ func GetIpTables() (IpTables, error) {
 	return tb, nil
 }
 
-func forward_role(local_port, remote_adr, protocol, add_delete string) (cmd *exec.Cmd) {
-	cmd = exec.Command(IpTablesCMD, "-t", "nat", add_delete, "PREROUTING", "-p", protocol,
+func forward_role(is_output bool, local_port, remote_adr, protocol, add_delete string) (cmd *exec.Cmd) {
+	var rule_type = "PREROUTING"
+	if is_output {
+		rule_type = "OUTPUT"
+	}
+	cmd = exec.Command(IpTablesCMD, "-t", "nat", add_delete, rule_type, "-p", protocol,
 		"--dport", local_port, "-j", "DNAT", "--to-destination", remote_adr)
-//	cmd = exec.Command(IpTablesCMD, "-t", "nat", add_delete, "OUTPUT", "-p", protocol,
-//		"--dport", local_port, "-j", "DNAT", "--to-destination", remote_adr)
 	return
 }
 
@@ -90,13 +110,13 @@ func deny_role(local_port, remote_adr, protocol, add_delete string) (cmd *exec.C
 }
 
 func (ip *IpTables) ForwardIp(local_port, remote_adr, protocol string) error {
-	cmd := forward_role(local_port, remote_adr, protocol, "-A")
+	cmd := forward_role(ip.OutputTraffic, local_port, remote_adr, protocol, "-A")
 	err := cmd.Run()
 	return err
 }
 
 func (ip *IpTables) ClearForwardIp(local_port, remote_adr, protocol string) error {
-	cmd := forward_role(local_port, remote_adr, protocol, "-D")
+	cmd := forward_role(ip.OutputTraffic, local_port, remote_adr, protocol, "-D")
 	err := cmd.Run()
 	return err
 }
@@ -120,33 +140,54 @@ type TableRule struct  {
 }
 
 
-var restore_rule = "-A PREROUTING -p %s -m tcp --dport %s -j DNAT --to-destination %s"
+// var restore_rule = "-A PREROUTING -p %s -m tcp --dport %s -j DNAT --to-destination %s"
+//
+// // Table rule by balancing ports, every time they will change their accessable rule
+// func (ip *IpTables) RecalculateDNATRole() {
+	// if len(AvailableRoutings) == 0 {
+	// 	return
+	// }
+// 	buffer := bytes.NewBufferString("*nat\n")
+// 	cmd := exec.Command("iptables-restore", "--table=nat")
+	// for _, r := range AvailableRoutings  {
+	// 	buffer.WriteString(fmt.Sprintf(restore_rule, r.Rule.Protocol, r.Rule.LocalPort, r.Rule.RemoteAddr))
+	// 	buffer.WriteString("\n")
+	// }
+// 	buffer.WriteString("COMMIT\n")
+// 	cmd.Stdin = buffer
+// 	cmd.Stdout = os.Stdout
+// 	cmd.Stderr = os.Stderr
+// 	cmd.Run()
+// }
+//
+// var clear_rules_string = `
+// *nat
+// COMMIT
+// `
+//
+// func (ip *IpTables) ClearDNATRole() {
+// 	cmd := exec.Command("iptables-restore", "--table=nat")
+// 	cmd.Stdin = bytes.NewBufferString(clear_rules_string)
+// 	cmd.Run()
+// }
 
-// Table rule by balancing ports, every time they will change their accessable rule
+var oldRules = make(map[int]PortRouting)
+
 func (ip *IpTables) RecalculateDNATRole() {
 	if len(AvailableRoutings) == 0 {
 		return
 	}
-	buffer := bytes.NewBufferString("*nat\n")
-	cmd := exec.Command("iptables-restore", "--table=nat")
-	for _, r := range AvailableRoutings  {
-		buffer.WriteString(fmt.Sprintf(restore_rule, r.Rule.Protocol, r.Rule.LocalPort, r.Rule.RemoteAddr))
-		buffer.WriteString("\n")
+
+	for port, r := range AvailableRoutings  {
+		if old, ok := oldRules[port]; ok {
+			ip.ClearForwardIp(old.Rule.LocalPort, old.Rule.RemoteAddr, old.Rule.Protocol)
+		}
+		ip.ForwardIp(r.Rule.LocalPort, r.Rule.RemoteAddr, r.Rule.Protocol)
 	}
-	buffer.WriteString("COMMIT\n")
-	cmd.Stdin = buffer
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Run()
 }
 
-var clear_rules_string = `
-*nat
-COMMIT
-`
-
 func (ip *IpTables) ClearDNATRole() {
-	cmd := exec.Command("iptables-restore", "--table=nat")
-	cmd.Stdin = bytes.NewBufferString(clear_rules_string)
-	cmd.Run()
+	for _, old := range oldRules  {
+		ip.ClearForwardIp(old.Rule.LocalPort, old.Rule.RemoteAddr, old.Rule.Protocol)
+	}
 }
