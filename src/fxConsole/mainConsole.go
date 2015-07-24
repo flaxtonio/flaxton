@@ -55,7 +55,9 @@ func RunArguments(args []string) {
 							{
 								local_port, _ := strconv.Atoi(next_args[i+1])
 								child_port, _ := strconv.Atoi(next_args[i+3])
-								daemon.BalancerPortChild[local_port] = make([]fxdocker.ChildServer, 0)
+								if len(daemon.BalancerPortChild[local_port]) == 0 {
+									daemon.BalancerPortChild[local_port] = make([]fxdocker.ChildServer, 0)
+								}
 								daemon.BalancerPortChild[local_port] = append(daemon.BalancerPortChild[local_port], fxdocker.ChildServer{
 									IP: next_args[i+2],
 									Port: child_port,
