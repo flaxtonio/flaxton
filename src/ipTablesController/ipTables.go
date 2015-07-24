@@ -182,6 +182,7 @@ func (ip *IpTables) RecalculateDNATRole() {
 			ip.ClearForwardIp(old.Rule.LocalPort, old.Rule.RemoteAddr, old.Rule.Protocol)
 		}
 		ip.ForwardIp(r.Rule.LocalPort, r.Rule.RemoteAddr, r.Rule.Protocol)
+		oldRules[port] = r
 	}
 }
 
