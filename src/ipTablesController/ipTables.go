@@ -21,8 +21,8 @@ iptables -t nat -A POSTROUTING -j MASQUERADE
 
 import (
 	"os/exec"
-	"bytes"
-	"fmt"
+//	"bytes"
+//	"fmt"
 	"os"
 )
 
@@ -40,7 +40,7 @@ func getTrafficType() bool {
 		ret_val = os.Getenv("FLAXTON_OUTPUT")
 	}
 	if ret_val == "0" {
-		retrun false
+		return false
 	}
 	return true
 }
