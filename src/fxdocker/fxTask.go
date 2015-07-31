@@ -378,7 +378,7 @@ func (fxd *FxDaemon) TransferImage(container_cmd map[string]string) (err error) 
 			if err != nil {
 				return err
 			}
-			client.StartContainer(cont.ID, &docker.HostConfig{})
+			client.StartContainer(cont.ID, &host_conf)
 			fmt.Println(cont.ID)
 		}
 	}
