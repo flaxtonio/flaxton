@@ -213,6 +213,8 @@ func RunArguments(args []string) {
 					run_command = ""
 					daemon = ""
 					count = ""
+					cpu_share = "0"
+					mem_set = "0"
 				)
 				next_args := args[1:]
 				for i, arg := range args[1:] {
@@ -224,6 +226,14 @@ func RunArguments(args []string) {
 						case "-cmd": // Repo Name
 							{
 								run_command = next_args[i+1]
+							}
+						case "-cpu": // Repo Name
+							{
+								cpu_share = next_args[i+1]
+							}
+						case "-mem": // Repo Name
+							{
+								mem_set = next_args[i+1]
 							}
 						case "-daemon": // Destination Host
 							{
@@ -240,6 +250,8 @@ func RunArguments(args []string) {
 								fmt.Println("OPTIONS:")
 								fmt.Println("-img  : Docker local image name, id or repository")
 								fmt.Println("-cmd  : If you want to start container after transfering, give this parameter as a run command")
+								fmt.Println("-cpu  : number for CPU shares based on Docker cpu-share parameter")
+								fmt.Println("-mem  : container RAM memory amount")
 								fmt.Println("-count  : How many containers you want to start after transfering, default: 1")
 								fmt.Println("-daemon  : Destionation Daemon Name or ID")
 								os.Exit(1)
@@ -247,7 +259,7 @@ func RunArguments(args []string) {
 					}
 				}
 
-				fxdocker.TransferImage(image, daemon, run_command, count, console_config.Authorization)
+				fxdocker.TransferImage(image, daemon, run_command, cpu_share, mem_set, count, console_config.Authorization)
 			}
 		case "-l", "login":
 			{

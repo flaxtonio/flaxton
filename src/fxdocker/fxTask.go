@@ -360,9 +360,20 @@ func (fxd *FxDaemon) TransferImage(container_cmd map[string]string) (err error) 
 		}
 		fmt.Println("Running Containers", count)
 		for i := 0; i < count; i++  {
+			host_conf := docker.HostConfig{}
+			// getiing cpu and ram params
+			cpu_cores, conv_err := strconv.Atoi(container_cmd["cpu"])
+			if conv_err == nil {
+				host_conf.CPUShares = int64(cpu_cores)
+			}
+			mem_set, mem_err := strconv.Atoi(container_cmd["mem"])
+			if mem_err == nil {
+				host_conf.Memory = int64(mem_set)
+			}
+
 			cont, err = client.CreateContainer(docker.CreateContainerOptions{
 				Config: &docker.Config{Cmd: []string{container_cmd["run_cmd"]}, Image: container_cmd["image"],AttachStdin: false, AttachStderr: false, AttachStdout: false},
-				HostConfig: &docker.HostConfig{},
+				HostConfig: &host_conf,
 			})
 			if err != nil {
 				return err

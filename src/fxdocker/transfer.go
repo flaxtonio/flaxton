@@ -77,7 +77,7 @@ func FlaxtonConsoleLogin(username, password string) string {
 	return auth_map["authorization"].(string)
 }
 
-func TransferImage(image, daemon, run_cmd, run_count string, authorization string) {
+func TransferImage(image, daemon, run_cmd, cpu_share, mem_set, run_count string, authorization string) {
 	client, _ := docker.NewClient(DockerEndpoint)
 	var (
 		err error
@@ -119,6 +119,8 @@ func TransferImage(image, daemon, run_cmd, run_count string, authorization strin
 		"run_cmd": run_cmd,
 		"image": image,
 		"run_count": run_count,
+		"cpu": cpu_share,
+		"mem": mem_set,
 	})
 
 	if err != nil {
