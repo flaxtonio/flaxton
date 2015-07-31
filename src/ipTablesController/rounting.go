@@ -11,7 +11,20 @@ import (
 var (
 	AvailableRoutings = make(map[int]PortRouting)
 	IpCommandChan = make(chan int)
+	RoutingTime = getReroutingTime()
 )
+
+func getReroutingTime() (ret_val int) {
+	ret_val = 100
+	var err error
+	if len(os.Getenv("FLAXTON_REROUTING")) > 0 {
+		ret_val, err = strconv.Atoi(os.Getenv("FLAXTON_REROUTING"))
+		if err != nil {
+			return
+		}
+	}
+	return
+}
 
 type PortRouting struct {
 	Port int
@@ -43,7 +56,7 @@ func InitRouting() {
 
 	for {
 		<- IpCommandChan
-		time.Sleep(time.Millisecond * 100)
+		time.Sleep(time.Millisecond * time.Duration(RoutingTime))
 		tablesCMD.RecalculateDNATRole()
 		IpCommandChan <- 1
 	}
