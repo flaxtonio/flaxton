@@ -178,10 +178,10 @@ func (ip *IpTables) RecalculateDNATRole() {
 	}
 
 	for port, r := range AvailableRoutings  {
+		ip.ForwardIp(r.Rule.LocalPort, r.Rule.RemoteAddr, r.Rule.Protocol)
 		if old, ok := oldRules[port]; ok {
 			ip.ClearForwardIp(old.Rule.LocalPort, old.Rule.RemoteAddr, old.Rule.Protocol)
 		}
-		ip.ForwardIp(r.Rule.LocalPort, r.Rule.RemoteAddr, r.Rule.Protocol)
 		oldRules[port] = r
 	}
 }
